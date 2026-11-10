@@ -1021,11 +1021,23 @@ function bindPay(root, cb) {
                 tutor_name: bk.tutorName,
                 tutor_email: t?.email || "",
                 student_name: bk.studentName,
+                student_email: bk.email,
                 subject: bk.subject,
                 session_date: fmt(bk.start, bk.tz, { dateStyle: "full" }),
                 session_time: tm(bk.start, bk.tz),
                 email: bk.email,
                 path: location.pathname,
+                // --- METADATA PASSED TO STRIPE ---
+                metadata: {
+                  studentEmail: bk.email,
+                  studentName: bk.studentName,
+                  tutorEmail: t?.email || "",
+                  tutorName: bk.tutorName,
+                  subject: bk.subject,
+                  date: fmt(bk.start, bk.tz, { dateStyle: "full" }),
+                  time: tm(bk.start, bk.tz),
+                  ref: bk.id,
+                },
               }),
             })
           ).json();
