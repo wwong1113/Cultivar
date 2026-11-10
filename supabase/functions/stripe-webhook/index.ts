@@ -22,7 +22,7 @@ async function sendEmail(to: string, subject: string, text: string) {
       Authorization: `Bearer ${RESEND_API_KEY}`,
     },
     body: JSON.stringify({
-      from: "cultivar+ <notifications@cultivar.ca>", // Replace with your verified Resend domain
+      from: "Cultivar <onboarding@resend.dev>",
       to,
       subject,
       text,
