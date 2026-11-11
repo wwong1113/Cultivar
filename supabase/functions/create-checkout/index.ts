@@ -130,6 +130,7 @@ Deno.serve(async (req) => {
       meta = {
         booking_id: b.id,
         ref: b.ref,
+        // Standard snake_case
         tutor_name: tutorName,
         tutor_email: tutorEmail,
         student_name: studentName,
@@ -137,6 +138,13 @@ Deno.serve(async (req) => {
         subject,
         session_date: sessionDate,
         session_time: sessionTime,
+        // Explicit camelCase for stripe-webhook compatibility
+        tutorEmail: tutorEmail,
+        tutorName: tutorName,
+        studentEmail: email ?? "",
+        studentName: studentName,
+        date: sessionDate,
+        time: sessionTime,
       };
       await admin
         .from("bookings")
@@ -155,19 +163,35 @@ Deno.serve(async (req) => {
       if (!/^CV-[A-Z0-9]{4,10}$/.test(ref))
         throw new Error("Invalid booking reference");
 
-      tutorName = String(body.tutor_name ?? "your tutor").slice(0, 100);
-      tutorEmail = String(body.tutor_email ?? "").slice(0, 100);
-      studentName = String(body.student_name ?? "Student").slice(0, 100);
+      tutorName = String(
+        body.tutor_name ?? body.tutorName ?? "your tutor",
+      ).slice(0, 100);
+      tutorEmail = String(
+        body.tutor_email ??
+          body.tutorEmail ??
+          (body.metadata?.tutorEmail || ""),
+      ).slice(0, 100);
+      studentName = String(
+        body.student_name ?? body.studentName ?? "Student",
+      ).slice(0, 100);
       subject = String(body.subject ?? "Tutoring").slice(0, 80);
-      sessionDate = String(body.session_date ?? body.when ?? "").slice(0, 60);
-      sessionTime = String(body.session_time ?? "").slice(0, 60);
-      email = /^\S+@\S+\.\S+$/.test(String(body.email ?? ""))
-        ? String(body.email)
+      sessionDate = String(
+        body.session_date ?? body.sessionDate ?? body.when ?? "",
+      ).slice(0, 60);
+      sessionTime = String(body.session_time ?? body.sessionTime ?? "").slice(
+        0,
+        60,
+      );
+      email = /^\S+@\S+\.\S+$/.test(
+        String(body.email ?? body.studentEmail ?? ""),
+      )
+        ? String(body.email ?? body.studentEmail)
         : undefined;
       desc = `${subject} · ${sessionDate} · ${ref}`;
 
       meta = {
         ref,
+        // Standard snake_case
         tutor_name: tutorName,
         tutor_email: tutorEmail,
         student_name: studentName,
@@ -175,6 +199,13 @@ Deno.serve(async (req) => {
         subject,
         session_date: sessionDate,
         session_time: sessionTime,
+        // Explicit camelCase & fallback properties for stripe-webhook
+        tutorEmail: tutorEmail,
+        tutorName: tutorName,
+        studentEmail: email ?? "",
+        studentName: studentName,
+        date: sessionDate,
+        time: sessionTime,
       };
     }
 

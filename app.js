@@ -26,7 +26,6 @@ const track = (e) => {
   a[e] = (a[e] || 0) + 1;
   LS.set("cv_an", a);
 };
-
 // ===== CONFIG =====
 const CFG = {
   currency: "CAD",
@@ -40,46 +39,42 @@ const CFG = {
     hash: "8f86a3683e12769c4737d78cd12117e6aefa3fcf7b1de7e7025660e2170d45b6",
   },
 };
-
-// Initialize Supabase client if loaded
-const supabase = window.supabase?.createClient
+// Supabase client (needs the supabase-js script tag in index.html)
+const sb = window.supabase?.createClient
   ? window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey)
   : null;
-
-// Async photo uploader to Supabase 'avatars' bucket
 async function uploadTutorPhoto(file, tutorId) {
-  if (!supabase) {
-    console.warn("Supabase SDK client is not loaded.");
+  if (!sb) {
+    console.warn("Supabase SDK is not loaded.");
     return "";
   }
   try {
-    const fileExt = file.name.split(".").pop();
-    const filePath = `tutor-${tutorId || Date.now()}.${fileExt}`;
-
-    const { error } = await supabase.storage
+    const ext = file.name.split(".").pop(),
+      path = `tutor-${tutorId || Date.now()}.${ext}`;
+    const { error } = await sb.storage
       .from("avatars")
-      .upload(filePath, file, { upsert: true, cacheControl: "3600" });
-
+      .upload(path, file, { upsert: true, cacheControl: "3600" });
     if (error) throw error;
-
-    const { data: urlData } = supabase.storage
-      .from("avatars")
-      .getPublicUrl(filePath);
-
-    return urlData.publicUrl;
+    return sb.storage.from("avatars").getPublicUrl(path).data.publicUrl;
   } catch (err) {
     console.error("Storage upload error:", err);
     alert("Photo upload failed: " + err.message);
     return "";
   }
 }
-
 // ===== CONTENT =====
 const C = {
-  tagline: "Academic support from someone who was recently in your shoes.",
-  sub: "cultivar+ connects Grade 9 to 12 students with university student tutors who recently took the same courses and made the same transition.",
+  tagline: "Learn from someone who’s been where you are.",
+  sub: "Personalized Grade 9–12 tutoring from university students who understand the courses, the pressure, and what comes next.",
+  facts: [
+    "Grades 9–12",
+    "Personalized 1-on-1 support",
+    "University student tutors",
+  ],
+  intro:
+    "Cultivar+ connects students in Grades 9–12 with university tutors who recently took the same courses and made the same transition.",
   overview: [
-    "cultivar+ is a tutoring and mentorship service that goes above and beyond, connecting high school students with university student tutors who have recently gone through the same courses, university applications, and transition into post-secondary education.",
+    "Cultivar+ is a tutoring and mentorship service that goes above and beyond, connecting high school students with university student tutors who have recently gone through the same courses, university applications, and transition into post-secondary education.",
     "We primarily serve students in Grades 9 to 12, with a focus on senior-level courses such as Advanced Functions, Calculus & Vectors, Biology, Chemistry, Business, English, and other high school subjects.",
     "Our tutors are current university students from different programs and schools. Students can choose tutors based not only on the subject they need help with, but also on their personality, university, program, interests, and experience.",
     "The goal is to make tutoring feel more personal than a traditional tutoring centre. We want students to learn from someone who feels approachable and relatable: someone who was recently in their position.",
@@ -111,6 +106,28 @@ const C = {
     "English / Writing",
     "Other subjects",
   ],
+  help: [
+    [
+      "Math",
+      [
+        "Grade 9–10 Mathematics",
+        "Functions",
+        "Advanced Functions",
+        "Calculus & Vectors",
+      ],
+    ],
+    ["Sciences", ["Grade 9–10 Science", "Biology", "Chemistry", "Physics"]],
+    ["English & Business", ["English / Writing", "Economics"]],
+    [
+      "Beyond the classroom",
+      [
+        "University applications",
+        "Choosing a program",
+        "Study habits",
+        "Student life",
+      ],
+    ],
+  ],
   quotes: [
     [
       "My tutor had just taken the same calculus course, and it showed.",
@@ -129,7 +146,7 @@ const C = {
     ],
     [
       "How much does a session cost?",
-      "Each tutor sets their own hourly rate, shown on their profile. You pay by credit card after booking.",
+      "Each tutor’s hourly rate is shown on their profile. You pay by credit card after booking.",
     ],
     [
       "How does payment work?",
@@ -143,16 +160,11 @@ const C = {
       "Who are the tutors?",
       "Current university students who recently took the same high school courses and went through the application process.",
     ],
-    [
-      "Can I become a tutor?",
-      "Yes. Create a tutor account, build your profile, and set your own availability.",
-    ],
   ],
   email: "hello@cultivar.example",
   phone: "(000) 000-0000",
 };
-
-// ===== DEFAULT AVAILABILITY =====
+// ===== DATA LAYER =====
 const DA = {
   1: [16, 20],
   2: [16, 20],
@@ -161,28 +173,29 @@ const DA = {
   5: [16, 20],
   6: [10, 16],
 };
-
-// Empty SEED array so tutors are registered dynamically
-const SEED = [];
-
+const SEED = [].map((t) => ({
+  role: "tutor",
+  seed: 1,
+  photo: "",
+  avail: DA,
+  blocked: [],
+  ...t,
+}));
 const U = () => LS.get("cv_u", []),
   setU = (u) => LS.set("cv_u", u),
   B = () => LS.get("cv_b", []),
   setB = (b) => LS.set("cv_b", b);
-
 const allTutors = () => [
     ...SEED,
     ...U().filter((u) => u.role === "tutor" && u.status !== "suspended"),
   ],
   tut = (id) => allTutors().find((t) => t.id === id);
-
 const me = () => {
   const id = LS.get("cv_me", null);
   return id === "admin"
     ? { id: "admin", role: "admin", name: "Admin" }
     : U().find((u) => u.id === id && u.status !== "suspended");
 };
-
 const DEF = {
   rate: 40,
   len: 60,
@@ -194,7 +207,6 @@ const DEF = {
 };
 const S = () => ({ ...DEF, ...LS.get("cv_set", {}) });
 const rid = (p) => p + Math.random().toString(36).slice(2, 8);
-
 async function sha(s) {
   const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
   return [...new Uint8Array(b)]
@@ -202,7 +214,6 @@ async function sha(s) {
     .join("");
 }
 const hp = (e, p) => sha(e.toLowerCase() + ":" + p);
-
 // time helpers
 function offs(ms, tz) {
   const p = Object.fromEntries(
@@ -238,7 +249,6 @@ const fmt = (ms, tz, o) =>
     fmt(ms, tz, { hour: "numeric", minute: "2-digit", hour12: true })
       .replace(/\./g, "")
       .toUpperCase();
-
 const money = (n) =>
     new Intl.NumberFormat("en-CA", {
       style: "currency",
@@ -246,7 +256,6 @@ const money = (n) =>
     }).format(n),
   rateOf = (t) => t.rate ?? S().rate,
   price = (t, b) => rateOf(t) * (b ? (b.end - b.start) / 36e5 : S().len / 60);
-
 const DOW = [
     "Sunday",
     "Monday",
@@ -257,7 +266,6 @@ const DOW = [
     "Saturday",
   ],
   gl = (g) => "Grade " + g;
-
 function slotsFor(t) {
   const s = S(),
     now = Date.now(),
@@ -291,29 +299,17 @@ function slotsFor(t) {
   }
   return out;
 }
-
 // ===== UI PARTS =====
-const IC = {
-  a: '<path d="M6 4v6M3 7h6M15 7h6M4 15l6 6M10 15l-6 6M15 18h6"/>',
-  b: '<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6A2 2 0 0 0 19 18l-5-9V3M7.5 15h9"/>',
-  c: '<path d="M4 19.5V5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2zm0 0A2 2 0 0 0 6 21h13"/>',
-  d: '<path d="M12 3l9 5-9 5-9-5zM7 11v5c0 1.5 2.2 3 5 3s5-1.500 5-3v-5"/>',
-};
-
 const bloomSvg = () =>
   `<svg class="bloom" viewBox="-60 -60 120 120" aria-hidden="true"><defs><linearGradient id="bg1" x1="0" x2="1"><stop offset="0" stop-color="#ff1a2e"/><stop offset="1" stop-color="#ff5fc0"/></linearGradient></defs><g fill="url(#bg1)">${[0, 90, 180, 270].map((r) => `<path transform="rotate(${r})" d="M0 -8C-26 -22 -22 -54 0 -56C22 -54 26 -22 0 -8Z"/>`).join("")}</g><circle r="11" fill="#ffb3d1"/></svg>`;
-
 const av = (t, c = "av") =>
   t.photo
     ? `<img class="${c} ph" src="${t.photo}" alt="${esc(t.name)}">`
     : `<div class="${c}" aria-hidden="true">${esc(t.name[0])}</div>`;
-
 const tags = (a) =>
   `<div class="tags">${a.map((s) => `<span class="tag">${esc(s)}</span>`).join("")}</div>`;
-
 const tcard = (t) =>
   `<article class="tc">${av(t)}<h3>${esc(t.name)}</h3><p class="uni">${esc(t.uni)} · ${esc(t.program)}</p>${tags(t.subjects)}<p class="vibe">${t.vibe.map(esc).join(" · ")}</p><p class="bio">${esc(t.bio.length > 110 ? t.bio.slice(0, 110) + "…" : t.bio)}</p><div class="row between"><b>${money(rateOf(t))}<small>/hr</small></b><span class="row" style="gap:8px"><a class="btn alt sm" href="#tutor-${t.id}">Profile</a><a class="btn sm" href="#book" data-track="book" onclick="pick('${t.id}')">Book</a></span></div></article>`;
-
 function pick(id) {
   Object.assign(st, {
     tutor: id,
@@ -325,85 +321,87 @@ function pick(id) {
     ref: null,
   });
 }
-
 function fx() {
   const els = [
     ...document.querySelectorAll(
-      "#app .about .split>*,#app .tc,#app .band,#app .q,#app .bn,#app .steps,#app .steps>div,#app details,#app .cta .wrap>*,#app section>.wrap>h2",
+      "#app .about .split>*,#app .tc,#app .band,#app .q,#app .steps,#app .steps>div,#app details,#app .help>div,#app .cta .wrap>*,#app section>.wrap>h2",
     ),
   ];
   els.forEach((e) => {
     e.classList.add("rv");
-    const p = e.parentElement;
-    const idx = [...p.children].indexOf(e);
-    e.style.setProperty("--d", (idx + 1) * 100 + "ms");
+    const p = e.parentElement,
+      i = [...p.children].indexOf(e);
+    e.style.setProperty("--d", Math.min(i + 1, 4) * 40 + "ms");
   });
   if (!("IntersectionObserver" in window)) {
     els.forEach((e) => e.classList.add("vis"));
-    return;
+  } else {
+    const io = new IntersectionObserver(
+      (es) =>
+        es.forEach((x) => {
+          if (x.isIntersecting) {
+            x.target.classList.add("vis");
+            io.unobserve(x.target);
+          }
+        }),
+      { threshold: 0.05, rootMargin: "0px 0px -2% 0px" },
+    );
+    els.forEach((e) => io.observe(e));
   }
-  const io = new IntersectionObserver(
-    (es) =>
-      es.forEach((x) => {
-        if (x.isIntersecting) {
-          x.target.classList.add("vis");
-          io.unobserve(x.target);
-        }
-      }),
-    { threshold: 0.1, rootMargin: "0px 0px -4% 0px" },
-  );
-  els.forEach((e) => io.observe(e));
+
   if (
     matchMedia("(hover:hover)").matches &&
     !matchMedia("(prefers-reduced-motion:reduce)").matches
-  )
-    document.querySelectorAll("#app .tc,#app .bn").forEach((c) => {
-      c.style.setProperty("--rx", "0deg");
-      c.style.setProperty("--ry", "0deg");
+  ) {
+    document.querySelectorAll(".tc").forEach((c) => {
+      let ticking = false,
+        px = 0,
+        py = 0;
+      c.onpointerenter = () => c.classList.add("tilting");
       c.onpointermove = (e) => {
-        const r = c.getBoundingClientRect();
-        c.style.setProperty(
-          "--ry",
-          ((e.clientX - r.left) / r.width - 0.5) * 7 + "deg",
-        );
-        c.style.setProperty(
-          "--rx",
-          -((e.clientY - r.top) / r.height - 0.5) * 7 + "deg",
-        );
+        px = e.clientX;
+        py = e.clientY;
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+          const r = c.getBoundingClientRect();
+          const ry = ((px - r.left) / r.width - 0.5) * 10;
+          const rx = -((py - r.top) / r.height - 0.5) * 8;
+          c.style.setProperty("--ry", ry.toFixed(2) + "deg");
+          c.style.setProperty("--rx", rx.toFixed(2) + "deg");
+          ticking = false;
+        });
       };
       c.onpointerleave = () => {
+        c.classList.remove("tilting");
         c.style.setProperty("--rx", "0deg");
         c.style.setProperty("--ry", "0deg");
       };
     });
+  }
 }
-
 // ===== ROUTER =====
 let route = "home",
   arg = null;
-
 function nav() {
   const m = me();
   $("#nv").innerHTML =
-    `<a class="l" href="#home">Home</a><a class="l" href="#tutors">Tutors</a><a class="l" href="#faq" data-scroll="faq">FAQ</a>${m ? `<a class="l" href="#${m.role === "admin" ? "admin" : "account"}">Dashboard</a><a class="l" href="#home" id="lo">Log out</a>` : `<a class="l" href="#signup" onclick="sessionStorage.cvrole='tutor'">Become a tutor</a><a class="l" href="#login">Log in</a>`}<a class="btn sm" href="#book" data-track="book">Book a Session</a>`;
+    `<a class="l" href="#home">Home</a><a class="l" href="#tutors">Tutors</a><a class="l" href="#faq" data-scroll="faq">FAQ</a>${m ? `<a class="l" href="#${m.role === "admin" ? "admin" : "account"}">Dashboard</a><a class="l" href="#home" id="lo">Log out</a>` : `<a class="l" href="#login">Log in</a>`}<a class="btn sm" href="#book" data-track="book">Book a Session</a>`;
   $("#lo")?.addEventListener("click", () => {
     LS.set("cv_me", null);
     nav();
   });
 }
-
 function gate(n) {
   sessionStorage.cvnext = n;
   location.hash = "login";
 }
-
 function after() {
   const n = sessionStorage.cvnext;
   sessionStorage.removeItem("cvnext");
   const m = me();
   location.hash = n || (m.role === "admin" ? "admin" : "account");
 }
-
 function go() {
   const h = location.hash.slice(1) || "home";
   let r = h;
@@ -432,7 +430,13 @@ function go() {
   }
   route = r;
   nav();
-  $("#ft").innerHTML = "cultivar+<br>" + C.email + " · " + C.phone;
+  {
+    const fe = $("#fe");
+    if (fe) {
+      fe.textContent = C.email;
+      fe.href = "mailto:" + C.email;
+    }
+  }
   R[r]();
   {
     const a = $("#app");
@@ -450,11 +454,9 @@ function go() {
       account: "Dashboard",
       admin: "Admin",
       profile: "Tutor profile",
-    }[r] ||
-      "cultivar+ | Academic support from someone who was recently in your shoes") +
-    (r === "home" ? "" : " | cultivar+");
+    }[r] || "Cultivar+ | Learn from someone who’s been where you are.") +
+    (r === "home" ? "" : " | Cultivar+");
 }
-
 addEventListener("hashchange", go);
 document.addEventListener("click", (e) => {
   const a = e.target.closest("[data-track]");
@@ -468,7 +470,6 @@ document.addEventListener("click", (e) => {
     } else $("#" + s.dataset.scroll)?.scrollIntoView();
   }
 });
-
 // ===== HOME =====
 function home() {
   track("page_home");
@@ -489,41 +490,14 @@ function home() {
     .map((w, i) => `<span class="w" style="--i:${i}">${w}</span>`)
     .join(
       " ",
-    )}</h1><p class="sub">${C.sub}</p><div class="row"><a class="btn" href="#tutors">Meet our tutors</a><a class="btn alt" href="#book" data-track="book">Book a Session</a></div><ul class="facts"><li>Grades 9 to 12</li><li>University student tutors</li><li>Book and pay online</li></ul></div><div class="stack">${T.length ? T.slice(0, 3).map(tcard).join("") : '<p class="mut">Tutors joining soon!</p>'}</div></div></section>
-<div class="mq" aria-hidden="true"><div class="tr">${[0, 1].map(() => C.subjects.map((x) => `<span>${x}</span>`).join("")).join("")}</div></div>
-<section id="tutors-sec"><div class="wrap"><h2 class="center">Choose a mentor, not just a tutor</h2><p class="mut center">Pick by subject, university, program or personality. Every tutor is a real university student.</p><div class="tg" style="margin-top:36px">${T.length ? T.slice(0, 6).map(tcard).join("") : '<p class="mut center">No tutors registered yet. Create a tutor account to get started!</p>'}</div><p class="center" style="margin-top:32px"><a class="btn alt" href="#tutors">Browse all tutors</a></p></div></section>
+    )}</h1><p class="sub">${C.sub}</p><div class="row"><a class="btn" href="#tutors">Meet our tutors</a><a class="btn alt" href="#book" data-track="book">Book a Session</a></div><ul class="facts">${C.facts.map((f) => `<li>${f}</li>`).join("")}</ul><p class="intro">${C.intro}</p></div><div class="stack">${T.length ? T.slice(0, 3).map(tcard).join("") : '<p class="mut">Tutors joining soon!</p>'}</div></div></section>
+<section id="tutors-sec"><div class="wrap"><h2 class="center">Choose a mentor, not just a tutor</h2><p class="mut center">Pick by subject, university, program or personality. Every tutor is a real university student.</p><div class="tg" style="margin-top:36px">${T.length ? T.slice(0, 6).map(tcard).join("") : '<p class="mut center">New tutors are joining soon.</p>'}</div><p class="center" style="margin-top:32px"><a class="btn alt" href="#tutors">Browse all tutors</a></p></div></section>
 <section id="about" class="about"><div class="wrap split"><div><h2>Who we are</h2><div class="tags" style="margin-top:18px">${C.words.map((w) => `<span class="tag">${w}</span>`).join("")}</div></div><div>${C.overview.map((p) => `<p>${p}</p>`).join("")}<h3 style="margin-top:28px">Our mission</h3>${C.mission.map((p) => `<p>${p}</p>`).join("")}</div></div></section>
-<section><div class="wrap"><h2 class="center">What we help with</h2><p class="mut center">Senior-level courses, plus the things school doesn't always teach.</p><div class="bento">${[
-    [
-      "Math",
-      "Advanced Functions and Calculus & Vectors, taught by someone who just finished them.",
-      "a",
-    ],
-    [
-      "Sciences",
-      "Biology and Chemistry with clear explanations and exam strategy.",
-      "b",
-    ],
-    [
-      "Business & English",
-      "Essays, discussion, projects and confident writing.",
-      "c",
-    ],
-    [
-      "University mentorship",
-      "Applications, choosing a program, study habits and student life, straight from students living it.",
-      "d",
-    ],
-  ]
-    .map(
-      ([h, p, i], k) =>
-        `<div class="bn b${k}"><svg class="bg" viewBox="0 0 24 24" aria-hidden="true">${IC[i]}</svg><div class="ico"><svg viewBox="0 0 24 24" aria-hidden="true">${IC[i]}</svg></div><h3>${h}</h3><p>${p}</p></div>`,
-    )
-    .join("")}</div></div></section>
+<section><div class="wrap"><h2 class="center">What we help with</h2><p class="mut center">Senior-level courses, plus the things school doesn’t always teach.</p><div class="help">${C.help.map(([h, items]) => `<div><h3>${h}</h3><ul>${items.map((i) => `<li>${i}</li>`).join("")}</ul></div>`).join("")}</div></div></section>
 <section class="about"><div class="wrap"><h2>How it works</h2><div class="steps four"><div><h3>Browse tutors</h3><p class="mut">Filter by subject, university and interests.</p></div><div><h3>Read a profile</h3><p class="mut">Meet the person behind the subject.</p></div><div><h3>Book a time</h3><p class="mut">See live availability and pick a slot.</p></div><div><h3>Pay and learn</h3><p class="mut">Pay by card after booking, then meet online.</p></div></div></div></section>
 <section><div class="wrap"><h2>What students say</h2><div class="qg">${C.quotes.map((q) => `<div class="q"><blockquote>“${q[0]}”</blockquote><cite>${q[1]}</cite></div>`).join("")}</div></div></section>
 <section id="faq" class="about"><div class="wrap split"><h2>Questions, answered</h2><div>${C.faq.map((f) => `<details><summary>${f[0]}</summary><p>${f[1]}</p></details>`).join("")}</div></div></section>
-<section class="cta" id="contact"><div class="wrap"><div><h2>Ready to grow?</h2><p>Find the tutor who feels right and book in minutes. University student? Join as a tutor.</p><div class="row"><a class="btn white" href="#tutors">Find a tutor</a><a class="btn white" style="background:none;color:#fff" href="#signup" onclick="sessionStorage.cvrole='tutor'">Become a tutor</a></div><p style="margin-top:24px">${C.email}<br>${C.phone}</p></div>
+<section class="cta" id="contact"><div class="wrap"><div><h2>Ready to grow?</h2><p>Find the tutor who feels right and book in minutes.</p><div class="row"><a class="btn white" href="#tutors">Find a tutor</a></div><p style="margin-top:24px">${C.email}<br>${C.phone}</p></div>
 <form id="cf" novalidate><label for="cn">Name</label><input id="cn"><label for="ce">Email</label><input id="ce" type="email"><label for="cm">Message</label><textarea id="cm" rows="4"></textarea><p class="err" id="cerr" role="alert"></p><button class="btn">Send message</button></form></div></section>`;
   fx();
   $("#cf").onsubmit = (e) => {
@@ -551,7 +525,6 @@ function home() {
       "<h3>Thank you!</h3><p>We got your message. (Demo: saved in this browser.)</p>";
   };
 }
-
 // ===== TUTORS + PROFILE =====
 function tutors() {
   const all = allTutors(),
@@ -574,12 +547,12 @@ function tutors() {
       );
     $("#tl").innerHTML = r.length
       ? r.map(tcard).join("")
-      : "<p>No tutors match yet. Try clearing a filter or signing up as a tutor.</p>";
+      : "<p>No tutors match yet. Try clearing a filter.</p>";
+    fx();
   };
   ["q", "fs", "fu"].forEach((i) => ($("#" + i).oninput = draw));
   draw();
 }
-
 function profile() {
   const t = tut(arg);
   if (!t) {
@@ -590,9 +563,8 @@ function profile() {
   const sl = slotsFor(t).slice(0, 6),
     tz = Intl.DateTimeFormat().resolvedOptions().timeZone || S().tz;
   $("#app").innerHTML =
-    `<section class="pg"><div class="wrap prof"><aside class="card pcard">${av(t, "av big")}<h1 class="h" style="font-size:2rem">${esc(t.name)}</h1><p class="uni">${esc(t.uni)}<br>${esc(t.program)}</p><p><b>${money(rateOf(t))}</b> <span class="mut">per hour</span></p><a class="btn" style="width:100%" href="#book" data-track="book" onclick="pick('${t.id}')">Book a Session</a></aside><div><h2>About ${esc(t.name.split(" ")[0])}</h2><p class="lead">${esc(t.bio)}</p><h3>Subjects</h3>${tags(t.subjects)}<h3 style="margin-top:24px">A bit about them</h3>${tags(t.vibe)}<h3 style="margin-top:24px">Happy to talk about</h3>${tags(["University applications", "Choosing a program", "Study habits", "Student life"])}<h3 style="margin-top:24px">Next available (${esc(tz)})</h3>${sl.length ? `<div class="tags">${sl.map((ms) => `<span class="tag">${fmt(ms, tz, { weekday: "short", month: "short", day: "numeric" })}, ${tm(ms, tz)}</span>`).join("")}</div>` : '<p class="mut">No open times right now.</p>'}</div></div></section>`;
+    `<section class="pg"><div class="wrap prof"><aside class="card pcard">${av(t, "av big")}<h1 class="h" style="font-size:2rem">${esc(t.name)}</h1><p class="uni">${esc(t.uni)}<br>${esc(t.program)}</p><p><b>${money(rateOf(t))}</b> <span class="mut">per hour</span></p><a class="btn" style="width:100%" href="#book" data-track="book" onclick="pick('${t.id}')">Book a Session</a></aside><div><h2>About ${esc(t.name.split(" ")[0])}</h2><p class="lead">${esc(t.bio)}</p><h3>Subjects</h3>${tags(t.subjects)}<h3 style="margin-top:24px">A bit about them</h3>${tags(t.vibe)}<h3 style="margin-top:24px">Ask me about</h3>${tags(t.ask && t.ask.length ? t.ask : ["University applications", "Choosing a program", "Study habits", "Student life"])}<h3 style="margin-top:24px">Next available (${esc(tz)})</h3>${sl.length ? `<div class="tags">${sl.map((ms) => `<span class="tag">${fmt(ms, tz, { weekday: "short", month: "short", day: "numeric" })}, ${tm(ms, tz)}</span>`).join("")}</div>` : '<p class="mut">No open times right now.</p>'}</div></div></section>`;
 }
-
 // ===== AUTH =====
 function login() {
   $("#app").innerHTML =
@@ -628,7 +600,7 @@ function login() {
       if (u && u.pw === (await hp(em, pw))) {
         if (u.status === "suspended") {
           er.textContent =
-            "This account is suspended. Please contact cultivar+.";
+            "This account is suspended. Please contact Cultivar+.";
           return;
         }
         ok = u.id;
@@ -646,10 +618,8 @@ function login() {
     }
   };
 }
-
 const tutorFields = (t) =>
   `<label for="un">University</label><input id="un" value="${esc(t.uni)}" placeholder="e.g. University of Toronto"><label for="pr">Program and year</label><input id="pr" value="${esc(t.program)}" placeholder="e.g. Life Sciences, Year 2"><fieldset class="fs"><legend>Subjects you tutor</legend>${C.subjects.map((s) => `<label class="chk"><input type="checkbox" name="sj" value="${s}" ${t.subjects?.includes(s) ? "checked" : ""}><span>${s}</span></label>`).join("")}</fieldset><label for="vb">Personality and interests (comma separated)</label><input id="vb" value="${esc((t.vibe || []).join(", "))}" placeholder="Patient, chess club, loves coffee"><label for="bi">Short bio</label><textarea id="bi" rows="4" maxlength="400">${esc(t.bio)}</textarea><label for="ph">Profile photo</label><input id="ph" type="file" accept="image/*"><label for="pl">Your Stripe Payment Link (optional)</label><input id="pl" value="${esc(t.payLink || "")}" placeholder="https://buy.stripe.com/...">`;
-
 function readTutor(ph) {
   const sj = [...document.querySelectorAll("[name=sj]:checked")].map(
     (x) => x.value,
@@ -667,7 +637,6 @@ function readTutor(ph) {
     ...(ph ? { photo: ph } : {}),
   };
 }
-
 function signup() {
   let role = sessionStorage.cvrole === "tutor" ? "tutor" : "student";
   sessionStorage.removeItem("cvrole");
@@ -683,13 +652,11 @@ function signup() {
   set(role);
   $("#rs").onclick = () => set("student");
   $("#rt_").onclick = () => set("tutor");
-
   let selectedFile = null;
   $("#ph") &&
     ($("#ph").onchange = (e) => {
       selectedFile = e.target.files[0] || null;
     });
-
   $("#sf").onsubmit = async (e) => {
     e.preventDefault();
     const er = $("#er"),
@@ -697,6 +664,7 @@ function signup() {
       em = $("#em").value.trim().toLowerCase(),
       pw = $("#pw").value,
       u = U();
+    er.style.color = "";
     if (!nm || !/^\S+@\S+\.\S+$/.test(em)) {
       er.textContent = "Please add your name and a valid email.";
       return;
@@ -713,15 +681,15 @@ function signup() {
       er.textContent = "Please accept the terms to continue.";
       return;
     }
-
     const userId = rid(role === "tutor" ? "u" : "s");
     let photoUrl = "";
     if (role === "tutor" && selectedFile) {
       er.style.color = "var(--ink)";
-      er.textContent = "Uploading photo to Supabase...";
+      er.textContent = "Uploading photo…";
       photoUrl = await uploadTutorPhoto(selectedFile, userId);
+      er.style.color = "";
+      er.textContent = "";
     }
-
     let rec = {
       id: userId,
       role,
@@ -734,7 +702,6 @@ function signup() {
     else {
       const t = readTutor(photoUrl);
       if (!t.uni || !t.program || !t.subjects.length || t.bio.length < 20) {
-        er.style.color = "#b00020";
         er.textContent =
           "Tutors: add your university, program, at least one subject, and a short bio.";
         return;
@@ -748,7 +715,6 @@ function signup() {
     after();
   };
 }
-
 // ===== BOOKING =====
 let st = {
   step: 1,
@@ -763,14 +729,12 @@ let st = {
   fm: "Online",
   ref: null,
 };
-
 function side() {
   const t = st.tutor && tut(st.tutor);
-  return `<aside class="side"><img src="assets/logo.png" alt="cultivar+"><h3>Tutoring session</h3>${t ? `<div class="mini">${av(t, "av sm")}<div><b>${esc(t.name)}</b><br><small>${esc(t.uni)}</small></div></div>` : ""}<dl><dt>Duration</dt><dd>${S().len} minutes</dd>${t ? `<dt>Price</dt><dd>${money(price(t))}</dd>` : ""}${st.subject ? `<dt>Subject</dt><dd>${esc(st.subject)}${st.grade ? ", " + gl(st.grade) : ""}</dd>` : ""}${st.slot ? `<dt>When</dt><dd>${fmt(st.slot, st.tz, { weekday: "long", month: "long", day: "numeric" })}<br>${tm(st.slot, st.tz)}</dd>` : ""}<dt>Time zone</dt><dd>${esc(st.tz)}</dd></dl></aside>`;
+  return `<aside class="side"><img src="assets/logo.png" alt="Cultivar+"><h3>Tutoring session</h3>${t ? `<div class="mini">${av(t, "av sm")}<div><b>${esc(t.name)}</b><br><small>${esc(t.uni)}</small></div></div>` : ""}<dl><dt>Duration</dt><dd>${S().len} minutes</dd>${t ? `<dt>Price</dt><dd>${money(price(t))}</dd>` : ""}${st.subject ? `<dt>Subject</dt><dd>${esc(st.subject)}${st.grade ? ", " + gl(st.grade) : ""}</dd>` : ""}${st.slot ? `<dt>When</dt><dd>${fmt(st.slot, st.tz, { weekday: "long", month: "long", day: "numeric" })}<br>${tm(st.slot, st.tz)}</dd>` : ""}<dt>Time zone</dt><dd>${esc(st.tz)}</dd></dl></aside>`;
 }
 const prog = () =>
   `<div class="prog" aria-label="Progress">${["Tutor", "Time", "Details", "Payment", "Done"].map((n, i) => `<span class="${i + 1 === st.step ? "on" : i + 1 < st.step ? "done" : ""}" ${i + 1 === st.step ? 'aria-current="step"' : ""}>${n}</span>`).join("")}</div>`;
-
 function book() {
   track("book_view");
   const m = me();
@@ -794,7 +758,6 @@ function book() {
     `<section class="book"><div class="wrap"><h1>Book a session</h1><div class="bk">${side()}<div class="main">${prog()}<div id="bs"></div></div></div></div></section>`;
   step();
 }
-
 function step() {
   clearInterval(st.h);
   $(".side").outerHTML = side();
@@ -806,12 +769,11 @@ function step() {
   [0, s1, s2, s3, s4, s5][st.step]();
   window.scrollTo({ top: 0 });
 }
-
 function s1() {
   const T = allTutors(),
     t = st.tutor && tut(st.tutor);
   $("#bs").innerHTML =
-    `<h2>Choose your tutor</h2><div class="pick">${T.length ? T.map((x) => `<button class="pk ${x.id === st.tutor ? "sel" : ""}" data-t="${x.id}" aria-pressed="${x.id === st.tutor}">${av(x, "av sm")}<span><b>${esc(x.name)}</b><br><small>${esc(x.uni)} · ${esc(x.program)}</small><br><small>${esc(x.subjects.join(", "))} · ${money(rateOf(x))}/hr</small></span></button>`).join("") : '<p class="mut">No tutors available to book yet.</p>'}</div>${t ? `<div class="two"><div><label for="sj">Subject</label><select id="sj"><option value="">Select…</option>${t.subjects.map((s) => `<option ${s === st.subject ? "selected" : ""}>${esc(s)}</option>`).join("")}</select></div><div><label for="gd">Your grade</label><select id="gd"><option value="">Select…</option>${[9, 10, 11, 12].map((g) => `<option value="${g}" ${g === st.grade ? "selected" : ""}>${gl(g)}</option>`).join("")}</select></div></div>` : ""}<div class="nav2"><span></span><button class="btn" id="nx" ${t && st.subject && st.grade ? "" : "disabled"}>Next</button></div>`;
+    `<h2>Choose your tutor</h2><div class="pick">${T.map((x) => `<button class="pk ${x.id === st.tutor ? "sel" : ""}" data-t="${x.id}" aria-pressed="${x.id === st.tutor}">${av(x, "av sm")}<span><b>${esc(x.name)}</b><br><small>${esc(x.uni)} · ${esc(x.program)}</small><br><small>${esc(x.subjects.join(", "))} · ${money(rateOf(x))}/hr</small></span></button>`).join("")}</div>${t ? `<div class="two"><div><label for="sj">Subject</label><select id="sj"><option value="">Select…</option>${t.subjects.map((s) => `<option ${s === st.subject ? "selected" : ""}>${esc(s)}</option>`).join("")}</select></div><div><label for="gd">Your grade</label><select id="gd"><option value="">Select…</option>${[9, 10, 11, 12].map((g) => `<option value="${g}" ${g === st.grade ? "selected" : ""}>${gl(g)}</option>`).join("")}</select></div></div>` : ""}<div class="nav2"><span></span><button class="btn" id="nx" ${t && st.subject && st.grade ? "" : "disabled"}>Next</button></div>`;
   document.querySelectorAll("[data-t]").forEach(
     (b) =>
       (b.onclick = () => {
@@ -839,7 +801,6 @@ function s1() {
     step();
   };
 }
-
 function s2() {
   const t = tut(st.tutor),
     a = slotsFor(t),
@@ -914,7 +875,6 @@ function s2() {
     step();
   };
 }
-
 function s3() {
   const m = me(),
     t = tut(st.tutor);
@@ -986,7 +946,6 @@ function s3() {
     step();
   };
 }
-
 function payBtns(b) {
   const t = tut(b.tutor),
     link = t?.payLink || CFG.stripeLink;
@@ -999,7 +958,6 @@ function payBtns(b) {
     ? `<a class="btn" href="${esc(link)}${link.includes("?") ? "&" : "?"}client_reference_id=${b.id}&prefilled_email=${encodeURIComponent(b.email)}" data-pay="${b.id}">Pay ${money(b.amount)} with card</a>`
     : `<button class="btn" data-demo="${b.id}">Pay ${money(b.amount)} (demo)</button>`;
 }
-
 function bindPay(root, cb) {
   root.querySelectorAll("[data-stripe]").forEach(
     (a) =>
@@ -1027,7 +985,6 @@ function bindPay(root, cb) {
                 session_time: tm(bk.start, bk.tz),
                 email: bk.email,
                 path: location.pathname,
-                // --- METADATA PASSED TO STRIPE ---
                 metadata: {
                   studentEmail: bk.email,
                   studentName: bk.studentName,
@@ -1060,14 +1017,12 @@ function bindPay(root, cb) {
     .querySelectorAll("[data-demo]")
     .forEach((a) => (a.onclick = () => setPaid(a.dataset.demo, "paid", cb)));
 }
-
 function setPaid(id, v, cb) {
   const bs = B();
   bs.find((x) => x.id === id).paid = v;
   setB(bs);
   cb();
 }
-
 function s4() {
   const b = B().find((x) => x.id === st.ref);
   $("#bs").innerHTML =
@@ -1088,13 +1043,12 @@ function s4() {
     step();
   };
 }
-
 function s5() {
   const b = B().find((x) => x.id === st.ref),
     s = S(),
     t = tut(b.tutor),
     z = (m) => new Date(m).toISOString().replace(/[-:]|\.\d{3}/g, "");
-  const gc = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent("cultivar+ with " + b.tutorName)}&dates=${z(b.start)}/${z(b.end)}&details=${encodeURIComponent(s.link)}`;
+  const gc = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent("Cultivar+ with " + b.tutorName)}&dates=${z(b.start)}/${z(b.end)}&details=${encodeURIComponent(s.link)}`;
   $("#bs").innerHTML =
     `<h2>All set!</h2><div class="card"><b>Reference:</b> ${b.id}<br><b>Tutor:</b> ${esc(b.tutorName)}<br><b>When:</b> ${fmt(b.start, st.tz, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}, ${tm(b.start, st.tz)} (${esc(st.tz)})<br><b>Subject:</b> ${esc(b.subject)}, ${gl(b.grade)}<br><b>${b.format === "Online" ? "Meeting link:" : "Location:"}</b> ${b.format === "Online" ? `<a href="${esc(s.link)}">${esc(s.link)}</a>` : "To be confirmed with your tutor"}<br><b>Payment:</b> ${b.paid === "paid" ? "Paid" : b.paid === "review" ? "Awaiting confirmation" : "Unpaid"}</div><div class="row" style="margin-top:20px" id="pb">${b.paid === "unpaid" ? payBtns(b) : ""}<a class="btn alt" href="${gc}" target="_blank" rel="noopener">Add to Google Calendar</a><button class="btn alt" id="ics">Download .ics</button><a class="btn alt" href="#account">My dashboard</a></div>`;
   bindPay($("#pb"), () => {
@@ -1105,7 +1059,7 @@ function s5() {
     const u = URL.createObjectURL(
       new Blob(
         [
-          `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//cultivar+//EN\r\nBEGIN:VEVENT\r\nUID:${b.id}@cultivar\r\nDTSTAMP:${z(Date.now())}\r\nDTSTART:${z(b.start)}\r\nDTEND:${z(b.end)}\r\nSUMMARY:cultivar+ with ${b.tutorName}\r\nDESCRIPTION:${s.link}\r\nEND:VEVENT\r\nEND:VCALENDAR`,
+          `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Cultivar+//EN\r\nBEGIN:VEVENT\r\nUID:${b.id}@cultivar\r\nDTSTAMP:${z(Date.now())}\r\nDTSTART:${z(b.start)}\r\nDTEND:${z(b.end)}\r\nSUMMARY:Cultivar+ with ${b.tutorName}\r\nDESCRIPTION:${s.link}\r\nEND:VEVENT\r\nEND:VCALENDAR`,
         ],
         { type: "text/calendar" },
       ),
@@ -1116,7 +1070,6 @@ function s5() {
     a.click();
   };
 }
-
 // ===== RETURN FROM STRIPE =====
 async function paid() {
   const m = me(),
@@ -1126,7 +1079,7 @@ async function paid() {
     bs = B(),
     b = bs.find((x) => x.id === id && x.student === m.id);
   let msg =
-    "We could not find a pending payment. If you were charged, contact cultivar+.";
+    "We could not find a pending payment. If you were charged, contact Cultivar+.";
   if (b && b.paid === "unpaid") {
     if (cs && CFG.checkoutUrl) {
       try {
@@ -1145,7 +1098,7 @@ async function paid() {
           msg = "Payment confirmed. Thank you!";
         } else
           msg =
-            "We could not confirm your payment yet. If you were charged, contact cultivar+.";
+            "We could not confirm your payment yet. If you were charged, contact Cultivar+.";
       } catch (e) {
         b.paid = "review";
         msg = "Thanks! Your payment is being confirmed.";
@@ -1160,7 +1113,6 @@ async function paid() {
   sessionStorage.cvmsg = msg;
   location.hash = "account";
 }
-
 // ===== DASHBOARDS =====
 let tab = "sessions";
 const cancel = (id) => {
@@ -1172,7 +1124,6 @@ const cancel = (id) => {
 };
 const when = (b, tz) =>
   fmt(b.start, tz, { dateStyle: "medium", timeStyle: "short" });
-
 function account() {
   const m = me();
   if (m.role === "admin") {
@@ -1269,7 +1220,7 @@ function account() {
     );
   }
   if (tab === "profile") {
-    el.innerHTML = `<form id="pf" style="max-width:620px"><p class="note">Your session rate is set by cultivar+ (currently ${money(rateOf(m))} per hour).</p><label for="nm">Name</label><input id="nm" value="${esc(m.name)}">${tutorFields(m)}<p class="err" id="er" role="alert"></p><button class="btn" style="margin-top:14px">Save profile</button></form>`;
+    el.innerHTML = `<form id="pf" style="max-width:620px"><p class="note">Your session rate is set by Cultivar+ (currently ${money(rateOf(m))} per hour).</p><label for="nm">Name</label><input id="nm" value="${esc(m.name)}">${tutorFields(m)}<p class="err" id="er" role="alert"></p><button class="btn" style="margin-top:14px">Save profile</button></form>`;
     let profileFile = null;
     $("#ph").onchange = (e) => {
       profileFile = e.target.files[0] || null;
@@ -1277,14 +1228,13 @@ function account() {
     $("#pf").onsubmit = async (e) => {
       e.preventDefault();
       const er = $("#er");
+      er.style.color = "";
       let photoUrl = m.photo || "";
-
       if (profileFile) {
         er.style.color = "var(--ink)";
-        er.textContent = "Uploading new photo...";
+        er.textContent = "Uploading new photo…";
         photoUrl = await uploadTutorPhoto(profileFile, m.id);
       }
-
       const t = readTutor(photoUrl);
       if (!t.subjects.length || t.bio.length < 20) {
         er.style.color = "#b00020";
@@ -1310,7 +1260,6 @@ function account() {
     el.innerHTML = `<div class="grid"><div class="card"><h3>${money(paid.reduce((s, b) => s + b.amount, 0))}</h3><p class="mut">Paid sessions (${paid.length})</p></div><div class="card"><h3>${money(aw.reduce((s, b) => s + b.amount, 0))}</h3><p class="mut">Unpaid or awaiting confirmation (${aw.length})</p></div></div><p class="note" style="margin-top:18px">Payouts: if you add your own Stripe Payment Link in Profile, students pay you directly.</p>`;
   }
 }
-
 // ===== ADMIN =====
 let atab = "b";
 function admin() {
@@ -1387,7 +1336,8 @@ function admin() {
   }
 
   if (atab === "u") {
-    const bk = B(),
+    const u = U(),
+      bk = B(),
       cnt = (id) =>
         bk.filter(
           (x) =>
@@ -1469,16 +1419,14 @@ function admin() {
       const nu = !x.id,
         role = x.role,
         dg = $("#dg");
-      dg.innerHTML = `<form id="uf2" novalidate method="dialog"><h2>${nu ? "Add " + role : "Edit " + esc(x.name)}</h2><label for="nm">Full name</label><input id="nm" value="${esc(x.name || "")}"><label for="em">Email</label><input id="em" type="email" value="${esc(x.email || "")}">${nu ? '<label for="tp">Temporary password (8+ characters)</label><input id="tp" type="text">' : ""}${role === "student" ? `<label for="gr">Grade</label><select id="gr">${[9, 10, 11, 12].map((g) => `<option ${g === x.grade ? "selected" : ""}>${g}</option>`).join("")}</select>` : tutorFields({ subjects: [], vibe: [], bio: "", ...x }) + `<label for="rO">Hourly rate override (${CFG.currency}, leave blank to use default ${money(S().rate)})</label><input id="rO" type="number" min="0" value="${x.rate ?? ""}">`}<p class="err" id="er" role="alert"></p><div class="row" style="margin-top:16px"><button class="btn" id="sv">Save</button><button class="btn alt" type="button" id="cx">Cancel</button></div></form>`;
+      dg.innerHTML = `<form id="uf2" novalidate method="dialog"><h2>${nu ? "Add " + role : "Edit " + esc(x.name)}</h2><label for="nm">Full name</label><input id="nm" value="${esc(x.name || "")}"><label for="em">Email</label><input id="em" type="email" value="${esc(x.email || "")}">${nu ? '<label for="tp">Temporary password (8+ characters)</label><input id="tp" type="text">' : ""}${role === "student" ? `<label for="gr">Grade</label><select id="gr">${[9, 10, 11, 12].map((g) => `<option ${g === x.grade ? "selected" : ""}>${g}</option>`).join("")}</select>` : tutorFields({ subjects: [], vibe: [], bio: "", ...x }) + `<label for="rO">Hourly rate override (${CFG.currency}, leave blank to use the default ${money(S().rate)})</label><input id="rO" type="number" min="0" value="${x.rate ?? ""}">`}<p class="err" id="er" role="alert"></p><div class="row" style="margin-top:16px"><button class="btn" id="sv">Save</button><button class="btn alt" type="button" id="cx">Cancel</button></div></form>`;
       dg.showModal();
       $("#cx").onclick = () => dg.close();
-
-      let adminSelectedFile = null;
+      let adminFile = null;
       $("#ph") &&
         ($("#ph").onchange = (e) => {
-          adminSelectedFile = e.target.files[0] || null;
+          adminFile = e.target.files[0] || null;
         });
-
       $("#uf2").onsubmit = async (e) => {
         e.preventDefault();
         const er = $("#er"),
@@ -1496,22 +1444,21 @@ function admin() {
           er.textContent = "That email is already used.";
           return;
         }
-
         const targetId = x.id || rid(role === "tutor" ? "u" : "s");
         let photoUrl = x.photo || "";
-
-        if (role === "tutor" && adminSelectedFile) {
+        er.style.color = "";
+        if (role === "tutor" && adminFile) {
           er.style.color = "var(--ink)";
-          er.textContent = "Uploading photo to Supabase...";
-          photoUrl = await uploadTutorPhoto(adminSelectedFile, targetId);
+          er.textContent = "Uploading photo…";
+          photoUrl = await uploadTutorPhoto(adminFile, targetId);
+          er.style.color = "";
+          er.textContent = "";
         }
-
         let rec = { ...x, name: nm, email: em };
         if (role === "student") rec.grade = +$("#gr").value;
         else {
           const t = readTutor(photoUrl);
           if (!t.uni || !t.program || !t.subjects.length || t.bio.length < 20) {
-            er.style.color = "#b00020";
             er.textContent =
               "Tutor needs university, program, a subject and a short bio.";
             return;
@@ -1521,11 +1468,9 @@ function admin() {
           rec.rate = r === "" ? undefined : +r;
           if (nu) Object.assign(rec, { avail: DA, blocked: [] });
         }
-
         if (nu) {
           const p = $("#tp").value;
           if (p.length < 8) {
-            er.style.color = "#b00020";
             er.textContent = "Temporary password must be 8+ characters.";
             return;
           }
@@ -1536,7 +1481,6 @@ function admin() {
           });
           a.push(rec);
         } else a[a.findIndex((y) => y.id === x.id)] = rec;
-
         setU(a);
         dg.close();
         draw();
@@ -1547,7 +1491,6 @@ function admin() {
     $("#uf").onchange = draw;
     draw();
   }
-
   if (atab === "s") {
     el.innerHTML = `<div class="two" style="max-width:640px">${[
       ["rate", "Default hourly rate (" + CFG.currency + ")"],
@@ -1594,7 +1537,6 @@ function admin() {
     };
   }
 }
-
 addEventListener(
   "scroll",
   () => $("header").classList.toggle("sc", scrollY > 8),
