@@ -17,45 +17,140 @@ const LS = {
     try {
       localStorage.setItem(k, JSON.stringify(v));
     } catch (e) {
-      alert("Browser storage is full. Try a smaller photo.");
+      alert("Browser storage is full.");
     }
   },
 };
+// Only these events are counted (the database ignores anything else).
+const TRACKED = new Set([
+  "page_home",
+  "book_click",
+  "book_view",
+  "booking_done",
+  "signup_student",
+  "signup_tutor",
+]);
 const track = (e) => {
-  const a = LS.get("cv_an", {});
-  a[e] = (a[e] || 0) + 1;
-  LS.set("cv_an", a);
+  if (!sb || !TRACKED.has(e)) return;
+  sb.rpc("track_event", { p_event: e }).then(
+    () => {},
+    () => {},
+  );
 };
 // ===== CONFIG =====
+// The URL and publishable key below are PUBLIC by design: every browser sees them.
+// Your protection is Row Level Security (supabase-setup.sql), not hiding these values.
+// NEVER put the service_role / secret key in this file.
 const CFG = {
   currency: "CAD",
   supabaseUrl: "https://tginxgkjvhwjzhovbqvi.supabase.co",
   supabaseKey: "sb_publishable_DabNqyM8t7ANJFJpXiOjIA_Jcnk5Xm6",
+  // Truthy = card payments are on. The "create-checkout" Edge Function does the real work
+  // (the price always comes from the database, never from the browser).
   checkoutUrl:
     "https://tginxgkjvhwjzhovbqvi.supabase.co/functions/v1/create-checkout",
   stripeLink: "",
-  admin: {
-    email: "admin@cultivar.example",
-    hash: "8f86a3683e12769c4737d78cd12117e6aefa3fcf7b1de7e7025660e2170d45b6",
-  },
 };
 // Supabase client (needs the supabase-js script tag in index.html)
+// PKCE keeps the email-confirmation redirect in ?code= so it doesn't clash with the #hash router.
 const sb = window.supabase?.createClient
-  ? window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey)
+  ? window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey, {
+      auth: {
+        flowType: "pkce",
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    })
   : null;
-async function uploadTutorPhoto(file, tutorId) {
+const AUTH = { busy: 0 };
+const EMAIL_RE = /^\S+@\S+\.\S+$/;
+const PAY_LINK_RE = /^https:\/\/(buy|donate)\.stripe\.com\/[^\s"<>]*$/;
+
+function authMsg(e) {
+  const m = String(e?.message || "").toLowerCase();
+  if (m.includes("invalid login")) return "Incorrect email or password.";
+  if (m.includes("not confirmed"))
+    return "Please confirm your email first. Check your inbox for the link.";
+  if (m.includes("banned") || m.includes("suspended"))
+    return "This account is suspended. Please contact Cultivar+.";
+  if (m.includes("already registered") || m.includes("already been registered"))
+    return "That email already has an account. Try logging in.";
+  if (e?.status === 429 || m.includes("rate limit"))
+    return "Too many attempts. Please wait a minute and try again.";
+  return e?.message || "Something went wrong. Please try again.";
+}
+// Edge Function errors hide the useful message inside error.context (a Response).
+async function fnErr(error) {
+  try {
+    const j = await error.context.json();
+    if (j?.error) return j.error;
+  } catch (_) {}
+  return error?.message || "Something went wrong.";
+}
+
+// ----- profile photos -----
+function loadImg(file) {
+  return new Promise((res, rej) => {
+    const u = URL.createObjectURL(file),
+      i = new Image();
+    i.onload = () => {
+      URL.revokeObjectURL(u);
+      res(i);
+    };
+    i.onerror = () => {
+      URL.revokeObjectURL(u);
+      rej(new Error("We couldn't read that image. Try a JPG or PNG."));
+    };
+    i.src = u;
+  });
+}
+// Re-encode every photo as a small JPEG: this strips hidden metadata (like GPS location),
+// guarantees it's a real image, and keeps files tiny.
+async function avatarBlob(file) {
+  if (!file || !/^image\//.test(file.type || ""))
+    throw new Error("Please choose an image file (JPG or PNG).");
+  if (file.size > 20 * 1024 * 1024)
+    throw new Error("That photo is too large. Please choose one under 20 MB.");
+  const img = await loadImg(file),
+    w0 = img.naturalWidth,
+    h0 = img.naturalHeight;
+  if (!w0 || !h0)
+    throw new Error("We couldn't read that image. Try a JPG or PNG.");
+  const sc = Math.min(1, 640 / Math.max(w0, h0)),
+    c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(w0 * sc));
+  c.height = Math.max(1, Math.round(h0 * sc));
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  const blob = await new Promise((r) => c.toBlob(r, "image/jpeg", 0.85));
+  if (!blob) throw new Error("We couldn't process that image. Try another.");
+  return blob;
+}
+// Uploads to avatars/<user-id>/avatar.jpg (the only path storage policies allow for that user).
+async function uploadTutorPhoto(file, userId) {
   if (!sb) {
     console.warn("Supabase SDK is not loaded.");
     return "";
   }
   try {
-    const ext = file.name.split(".").pop(),
-      path = `tutor-${tutorId || Date.now()}.${ext}`;
-    const { error } = await sb.storage
-      .from("avatars")
-      .upload(path, file, { upsert: true, cacheControl: "3600" });
+    if (!userId) throw new Error("Please log in first.");
+    const blob = await avatarBlob(file),
+      path = `${userId}/avatar.jpg`;
+    const { error } = await sb.storage.from("avatars").upload(path, blob, {
+      upsert: true,
+      cacheControl: "3600",
+      contentType: "image/jpeg",
+    });
     if (error) throw error;
-    return sb.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+    // ?v= makes browsers fetch the new picture instead of the cached old one
+    return (
+      sb.storage.from("avatars").getPublicUrl(path).data.publicUrl +
+      "?v=" +
+      Date.now()
+    );
   } catch (err) {
     console.error("Storage upload error:", err);
     alert("Photo upload failed: " + err.message);
@@ -165,6 +260,9 @@ const C = {
   phone: "(000) 000-0000",
 };
 // ===== DATA LAYER =====
+// Everything lives in Supabase. The rest of the app still reads through the small
+// synchronous helpers below (U, B, S, me, allTutors...), which are backed by this
+// in-memory cache that the load*() functions refill from the database.
 const DA = {
   1: [16, 20],
   2: [16, 20],
@@ -181,21 +279,25 @@ const SEED = [].map((t) => ({
   blocked: [],
   ...t,
 }));
-const U = () => LS.get("cv_u", []),
-  setU = (u) => LS.set("cv_u", u),
-  B = () => LS.get("cv_b", []),
-  setB = (b) => LS.set("cv_b", b);
-const allTutors = () => [
-    ...SEED,
-    ...U().filter((u) => u.role === "tutor" && u.status !== "suspended"),
-  ],
-  tut = (id) => allTutors().find((t) => t.id === id);
-const me = () => {
-  const id = LS.get("cv_me", null);
-  return id === "admin"
-    ? { id: "admin", role: "admin", name: "Admin" }
-    : U().find((u) => u.id === id && u.status !== "suspended");
+const DB = {
+  me: null, // logged-in user ({role:'student'|'tutor'|'admin', ...}) or null
+  issue: "", // why login didn't complete: suspended / noprofile / network
+  detail: "", // the technical reason, shown on the login page to help debugging
+  tutors: [], // public directory
+  busy: [], // taken time slots (no personal info)
+  bookings: [], // only the ones this user is allowed to see
+  users: [], // admin only
+  messages: [], // admin only
+  an: {}, // admin only
+  settings: {},
+  link: "",
 };
+const FRESH = { pub: 0, mine: 0, adm: 0 };
+const U = () => DB.users,
+  B = () => DB.bookings;
+const allTutors = () => [...SEED, ...DB.tutors],
+  tut = (id) => allTutors().find((t) => t.id === id);
+const me = () => DB.me;
 const DEF = {
   rate: 40,
   len: 60,
@@ -205,15 +307,213 @@ const DEF = {
   tz: "America/Toronto",
   link: "https://meet.google.com/your-link",
 };
-const S = () => ({ ...DEF, ...LS.get("cv_set", {}) });
-const rid = (p) => p + Math.random().toString(36).slice(2, 8);
-async function sha(s) {
-  const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
-  return [...new Uint8Array(b)]
-    .map((x) => x.toString(16).padStart(2, "0"))
-    .join("");
+const S = () => ({ ...DEF, ...DB.settings, link: DB.link || DEF.link });
+
+const mapProfile = (p) => ({
+  id: p.id,
+  role: p.role,
+  status: p.status,
+  name: p.name,
+  email: p.email || "",
+  grade: p.grade,
+  uni: p.uni || "",
+  program: p.program || "",
+  subjects: p.subjects || [],
+  vibe: p.vibe || [],
+  bio: p.bio || "",
+  payLink: p.pay_link || "",
+  photo: p.photo || "",
+  rate: p.rate == null ? undefined : +p.rate,
+  avail: p.avail || {},
+  blocked: p.blocked || [],
+  created: Date.parse(p.created_at),
+});
+const mapTutor = (p) =>
+  mapProfile({ ...p, role: "tutor", status: "active", email: "" });
+const mapBooking = (r) => ({
+  id: r.id,
+  tutor: r.tutor_id,
+  tutorName: r.tutor_name,
+  student: r.student_id,
+  studentName: r.student_name,
+  email: r.student_email,
+  grade: r.grade,
+  subject: r.subject,
+  start: Date.parse(r.start_at),
+  end: Date.parse(r.end_at),
+  format: r.format,
+  notes: r.notes,
+  status: r.status,
+  paid: r.paid,
+  amount: +r.amount,
+  created: Date.parse(r.created_at),
+  tz: r.tz,
+});
+
+// Public data: tutors, settings and which slots are taken (works logged out).
+async function loadPublic() {
+  if (!sb) return;
+  try {
+    const [t, s, b] = await Promise.all([
+      sb.rpc("list_tutors"),
+      sb
+        .from("app_settings")
+        .select("rate,len,buf,notice,window_days,tz")
+        .eq("id", 1)
+        .maybeSingle(),
+      sb.rpc("list_busy"),
+    ]);
+    if (t.error) console.error(t.error);
+    else DB.tutors = (t.data || []).map(mapTutor);
+    if (s.error) console.error(s.error);
+    else if (s.data)
+      DB.settings = {
+        rate: +s.data.rate,
+        len: s.data.len,
+        buf: s.data.buf,
+        notice: s.data.notice,
+        window: s.data.window_days,
+        tz: s.data.tz,
+      };
+    if (b.error) console.error(b.error);
+    else
+      DB.busy = (b.data || []).map((r) => ({
+        tutor: r.tutor_id,
+        start: Date.parse(r.start_at),
+        end: Date.parse(r.end_at),
+      }));
+  } catch (e) {
+    console.error(e);
+  }
+  FRESH.pub = Date.now();
 }
-const hp = (e, p) => sha(e.toLowerCase() + ":" + p);
+// Who is logged in. Admin status is decided by the database, never by the browser.
+async function loadSession() {
+  DB.me = null;
+  DB.issue = "";
+  DB.detail = "";
+  if (!sb) return;
+  const {
+    data: { session },
+  } = await sb.auth.getSession();
+  if (!session) return;
+  const uid = session.user.id;
+  const [adm, prof] = await Promise.all([
+    sb.rpc("is_admin"),
+    sb.from("profiles").select("*").eq("id", uid).maybeSingle(),
+  ]);
+  if (adm.error || prof.error) {
+    DB.issue = "network"; // keep the session; try again on next load
+    DB.detail = (adm.error || prof.error).message || "";
+    console.error("Could not load account:", adm.error || prof.error);
+    return;
+  }
+  if (adm.data === true) {
+    DB.me = {
+      id: uid,
+      role: "admin",
+      name: "Admin",
+      email: session.user.email,
+    };
+    return;
+  }
+  if (prof.data && prof.data.status === "active") {
+    DB.me = mapProfile(prof.data);
+    return;
+  }
+  DB.issue = prof.data ? "suspended" : "noprofile";
+  await sb.auth.signOut();
+}
+async function refreshMe() {
+  if (!sb || !DB.me || DB.me.role === "admin") return;
+  const r = await sb
+    .from("profiles")
+    .select("*")
+    .eq("id", DB.me.id)
+    .maybeSingle();
+  if (r.data) DB.me = mapProfile(r.data);
+}
+// My bookings (students/tutors see their own, admin sees all - enforced by RLS) + meeting link.
+async function loadMine() {
+  if (!sb) return;
+  if (!DB.me) {
+    DB.bookings = [];
+    DB.link = "";
+    FRESH.mine = Date.now();
+    return;
+  }
+  try {
+    const [b, l] = await Promise.all([
+      sb.from("bookings").select("*").order("start_at"),
+      sb.rpc("meeting_link"),
+    ]);
+    if (b.error) console.error(b.error);
+    else DB.bookings = (b.data || []).map(mapBooking);
+    if (!l.error) DB.link = l.data || "";
+  } catch (e) {
+    console.error(e);
+  }
+  FRESH.mine = Date.now();
+}
+async function loadAdmin() {
+  if (!sb || DB.me?.role !== "admin") return;
+  try {
+    const [u, m, a] = await Promise.all([
+      sb.from("profiles").select("*").order("created_at"),
+      sb
+        .from("contact_messages")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(200),
+      sb.from("analytics").select("*"),
+    ]);
+    if (!u.error) DB.users = (u.data || []).map(mapProfile);
+    if (!m.error) DB.messages = m.data || [];
+    if (!a.error)
+      DB.an = Object.fromEntries((a.data || []).map((r) => [r.event, +r.n]));
+  } catch (e) {
+    console.error(e);
+  }
+  FRESH.adm = Date.now();
+}
+async function boot() {
+  await loadSession();
+  await Promise.all([loadPublic(), loadMine()]);
+  if (DB.me?.role === "admin") await loadAdmin();
+}
+function resetSession() {
+  Object.assign(DB, {
+    me: null,
+    issue: "",
+    bookings: [],
+    users: [],
+    messages: [],
+    an: {},
+    link: "",
+  });
+  FRESH.mine = FRESH.adm = 0;
+}
+// Save changes to MY OWN profile (the database only lets people edit their own safe fields).
+async function saveMine(patch) {
+  const cur = me();
+  if (!cur || cur.role === "admin") return false;
+  const { error } = await sb.from("profiles").update(patch).eq("id", cur.id);
+  if (error) {
+    alert("Could not save: " + error.message);
+    return false;
+  }
+  await Promise.all([refreshMe(), loadPublic()]);
+  return true;
+}
+// Admin-only actions that need the service key live in the "admin-users" Edge Function.
+async function adminFn(action, payload = {}) {
+  const { data, error } = await sb.functions.invoke("admin-users", {
+    body: { action, ...payload },
+  });
+  if (error) throw new Error(await fnErr(error));
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
 // time helpers
 function offs(ms, tz) {
   const p = Object.fromEntries(
@@ -271,7 +571,7 @@ function slotsFor(t) {
     now = Date.now(),
     out = [],
     t0 = new Date(),
-    bk = B().filter((b) => b.tutor === t.id && b.status === "confirmed");
+    bk = DB.busy.filter((b) => b.tutor === t.id);
   for (let i = 0; i <= s.window + 1; i++) {
     const dt = new Date(
         Date.UTC(t0.getUTCFullYear(), t0.getUTCMonth(), t0.getUTCDate() + i),
@@ -304,7 +604,7 @@ const bloomSvg = () =>
   `<svg class="bloom" viewBox="-60 -60 120 120" aria-hidden="true"><defs><linearGradient id="bg1" x1="0" x2="1"><stop offset="0" stop-color="#ff1a2e"/><stop offset="1" stop-color="#ff5fc0"/></linearGradient></defs><g fill="url(#bg1)">${[0, 90, 180, 270].map((r) => `<path transform="rotate(${r})" d="M0 -8C-26 -22 -22 -54 0 -56C22 -54 26 -22 0 -8Z"/>`).join("")}</g><circle r="11" fill="#ffb3d1"/></svg>`;
 const av = (t, c = "av") =>
   t.photo
-    ? `<img class="${c} ph" src="${t.photo}" alt="${esc(t.name)}">`
+    ? `<img class="${c} ph" src="${esc(t.photo)}" alt="${esc(t.name)}">`
     : `<div class="${c}" aria-hidden="true">${esc(t.name[0])}</div>`;
 const tags = (a) =>
   `<div class="tags">${a.map((s) => `<span class="tag">${esc(s)}</span>`).join("")}</div>`;
@@ -382,14 +682,21 @@ function fx() {
 }
 // ===== ROUTER =====
 let route = "home",
-  arg = null;
+  arg = null,
+  navTok = 0;
 function nav() {
   const m = me();
   $("#nv").innerHTML =
     `<a class="l" href="#home">Home</a><a class="l" href="#tutors">Tutors</a><a class="l" href="#faq" data-scroll="faq">FAQ</a>${m ? `<a class="l" href="#${m.role === "admin" ? "admin" : "account"}">Dashboard</a><a class="l" href="#home" id="lo">Log out</a>` : `<a class="l" href="#login">Log in</a>`}<a class="btn sm" href="#book" data-track="book">Book a Session</a>`;
-  $("#lo")?.addEventListener("click", () => {
-    LS.set("cv_me", null);
+  $("#lo")?.addEventListener("click", async (e) => {
+    e.preventDefault();
+    resetSession(); // clear first so the auth listener ignores our own sign-out
+    try {
+      await sb.auth.signOut();
+    } catch (_) {}
     nav();
+    if (location.hash !== "#home") location.hash = "home";
+    else go();
   });
 }
 function gate(n) {
@@ -402,7 +709,25 @@ function after() {
   const m = me();
   location.hash = n || (m.role === "admin" ? "admin" : "account");
 }
-function go() {
+// Refresh data from the database when it's stale, so people always see current availability.
+async function ensure(r) {
+  const now = Date.now(),
+    jobs = [],
+    maxAge =
+      { book: 3000, profile: 5000, account: 3000, admin: 3000 }[r] ?? 30000;
+  if (now - FRESH.pub > maxAge) jobs.push(loadPublic());
+  if (
+    DB.me &&
+    ["account", "admin", "book", "paid"].includes(r) &&
+    now - FRESH.mine > 3000
+  )
+    jobs.push(loadMine());
+  if (DB.me?.role === "admin" && r === "admin" && now - FRESH.adm > 3000)
+    jobs.push(loadAdmin());
+  if (jobs.length) await Promise.all(jobs);
+}
+async function go() {
+  const tok = ++navTok;
   const h = location.hash.slice(1) || "home";
   let r = h;
   arg = null;
@@ -422,6 +747,8 @@ function go() {
     paid,
   };
   if (!R[r]) r = "home";
+  await ensure(r);
+  if (tok !== navTok) return; // the person already navigated somewhere else
   const m = me();
   if ((r === "account" || r === "paid") && !m) return gate("account");
   if (r === "admin" && m?.role !== "admin") return gate("admin");
@@ -500,12 +827,12 @@ function home() {
 <section class="cta" id="contact"><div class="wrap"><div><h2>Ready to grow?</h2><p>Find the tutor who feels right and book in minutes.</p><div class="row"><a class="btn white" href="#tutors">Find a tutor</a></div><p style="margin-top:24px">${C.email}<br>${C.phone}</p></div>
 <form id="cf" novalidate><label for="cn">Name</label><input id="cn"><label for="ce">Email</label><input id="ce" type="email"><label for="cm">Message</label><textarea id="cm" rows="4"></textarea><p class="err" id="cerr" role="alert"></p><button class="btn">Send message</button></form></div></section>`;
   fx();
-  $("#cf").onsubmit = (e) => {
+  $("#cf").onsubmit = async (e) => {
     e.preventDefault();
     if (
       !(
         $("#cn").value.trim() &&
-        /^\S+@\S+\.\S+$/.test($("#ce").value) &&
+        EMAIL_RE.test($("#ce").value) &&
         $("#cm").value.trim()
       )
     ) {
@@ -513,16 +840,22 @@ function home() {
         "Please add your name, a valid email, and a message.";
       return;
     }
-    const m = LS.get("cv_msg", []);
-    m.push({
-      n: $("#cn").value,
-      e: $("#ce").value,
-      m: $("#cm").value,
-      at: Date.now(),
+    const btn = $("#cf button");
+    btn.disabled = true;
+    $("#cerr").textContent = "";
+    const { error } = await sb.rpc("submit_contact", {
+      p_name: $("#cn").value,
+      p_email: $("#ce").value,
+      p_message: $("#cm").value,
     });
-    LS.set("cv_msg", m);
+    if (error) {
+      btn.disabled = false;
+      $("#cerr").textContent =
+        error.message || "Could not send your message. Please try again.";
+      return;
+    }
     $("#cf").innerHTML =
-      "<h3>Thank you!</h3><p>We got your message. (Demo: saved in this browser.)</p>";
+      "<h3>Thank you!</h3><p>We got your message and will get back to you soon.</p>";
   };
 }
 // ===== TUTORS + PROFILE =====
@@ -580,8 +913,8 @@ function login() {
     const er = $("#le"),
       em = $("#le_").value.trim().toLowerCase(),
       pw = $("#pw").value;
-    if (!window.crypto?.subtle) {
-      er.textContent = "Needs https or localhost.";
+    if (!em || !pw) {
+      er.textContent = "Enter your email and password.";
       return;
     }
     let f = LS.get("cv_fail", { n: 0, until: 0 });
@@ -589,38 +922,51 @@ function login() {
       er.textContent = "Too many attempts. Try again in a minute.";
       return;
     }
-    let ok = null;
-    if (
-      em === CFG.admin.email &&
-      (await sha(pw)) === (LS.get("cv_admin", {}).hash || CFG.admin.hash)
-    )
-      ok = "admin";
-    else {
-      const u = U().find((u) => u.email === em);
-      if (u && u.pw === (await hp(em, pw))) {
-        if (u.status === "suspended") {
-          er.textContent =
-            "This account is suspended. Please contact Cultivar+.";
-          return;
+    const btn = $("#sb");
+    btn.disabled = true;
+    er.textContent = "";
+    AUTH.busy++;
+    try {
+      const { error } = await sb.auth.signInWithPassword({
+        email: em,
+        password: pw,
+      });
+      if (error) {
+        console.warn("Login error:", error.message);
+        if (/invalid login/i.test(error.message)) {
+          f.n++;
+          if (f.n >= 5) f = { n: 0, until: Date.now() + 6e4 };
+          LS.set("cv_fail", f);
         }
-        ok = u.id;
+        er.textContent = authMsg(error);
+        return;
       }
-    }
-    if (ok) {
-      LS.set("cv_me", ok);
       LS.set("cv_fail", { n: 0, until: 0 });
+      await loadSession();
+      if (!DB.me) {
+        er.textContent =
+          DB.issue === "suspended"
+            ? "This account is suspended. Please contact Cultivar+."
+            : DB.issue === "noprofile"
+              ? "Your login worked, but this account has no profile row. Please contact Cultivar+."
+              : "We couldn't load your account" +
+                (DB.detail ? " (" + DB.detail + ")" : "") +
+                ". Please try again.";
+        return;
+      }
+      await Promise.all([loadPublic(), loadMine()]);
+      if (DB.me.role === "admin") await loadAdmin();
       after();
-    } else {
-      f.n++;
-      if (f.n >= 5) f = { n: 0, until: Date.now() + 6e4 };
-      LS.set("cv_fail", f);
-      er.textContent = "Incorrect email or password.";
+    } finally {
+      AUTH.busy--;
+      btn.disabled = false;
     }
   };
 }
 const tutorFields = (t) =>
   `<label for="un">University</label><input id="un" value="${esc(t.uni)}" placeholder="e.g. University of Toronto"><label for="pr">Program and year</label><input id="pr" value="${esc(t.program)}" placeholder="e.g. Life Sciences, Year 2"><fieldset class="fs"><legend>Subjects you tutor</legend>${C.subjects.map((s) => `<label class="chk"><input type="checkbox" name="sj" value="${s}" ${t.subjects?.includes(s) ? "checked" : ""}><span>${s}</span></label>`).join("")}</fieldset><label for="vb">Personality and interests (comma separated)</label><input id="vb" value="${esc((t.vibe || []).join(", "))}" placeholder="Patient, chess club, loves coffee"><label for="bi">Short bio</label><textarea id="bi" rows="4" maxlength="400">${esc(t.bio)}</textarea><label for="ph">Profile photo</label><input id="ph" type="file" accept="image/*"><label for="pl">Your Stripe Payment Link (optional)</label><input id="pl" value="${esc(t.payLink || "")}" placeholder="https://buy.stripe.com/...">`;
-function readTutor(ph) {
+
+function readTutor(existingPhoto = "") {
   const sj = [...document.querySelectorAll("[name=sj]:checked")].map(
     (x) => x.value,
   );
@@ -634,9 +980,10 @@ function readTutor(ph) {
       .filter(Boolean),
     bio: $("#bi").value.trim(),
     payLink: $("#pl").value.trim(),
-    ...(ph ? { photo: ph } : {}),
+    photo: existingPhoto || "",
   };
 }
+
 function signup() {
   let role = sessionStorage.cvrole === "tutor" ? "tutor" : "student";
   sessionStorage.removeItem("cvrole");
@@ -662,10 +1009,9 @@ function signup() {
     const er = $("#er"),
       nm = $("#nm").value.trim(),
       em = $("#em").value.trim().toLowerCase(),
-      pw = $("#pw").value,
-      u = U();
+      pw = $("#pw").value;
     er.style.color = "";
-    if (!nm || !/^\S+@\S+\.\S+$/.test(em)) {
+    if (!nm || !EMAIL_RE.test(em)) {
       er.textContent = "Please add your name and a valid email.";
       return;
     }
@@ -673,46 +1019,80 @@ function signup() {
       er.textContent = "Password must be at least 8 characters.";
       return;
     }
-    if (u.some((x) => x.email === em) || em === CFG.admin.email) {
-      er.textContent = "That email already has an account. Try logging in.";
-      return;
-    }
     if (!$("#ck").checked) {
       er.textContent = "Please accept the terms to continue.";
       return;
     }
-    const userId = rid(role === "tutor" ? "u" : "s");
-    let photoUrl = "";
-    if (role === "tutor" && selectedFile) {
-      er.style.color = "var(--ink)";
-      er.textContent = "Uploading photo…";
-      photoUrl = await uploadTutorPhoto(selectedFile, userId);
-      er.style.color = "";
-      er.textContent = "";
-    }
-    let rec = {
-      id: userId,
-      role,
-      name: nm,
-      email: em,
-      pw: await hp(em, pw),
-      created: Date.now(),
-    };
-    if (role === "student") rec.grade = +$("#gr").value;
+    const meta = { role, name: nm };
+    if (role === "student") meta.grade = +$("#gr").value;
     else {
-      const t = readTutor(photoUrl);
+      const t = readTutor("");
       if (!t.uni || !t.program || !t.subjects.length || t.bio.length < 20) {
         er.textContent =
-          "Tutors: add your university, program, at least one subject, and a short bio.";
+          "Tutors need a university, program, at least one subject and a short bio (20+ characters).";
         return;
       }
-      Object.assign(rec, t, { avail: DA, blocked: [] });
+      if (t.payLink && !PAY_LINK_RE.test(t.payLink)) {
+        er.textContent =
+          "Your payment link must be a Stripe link starting with https://buy.stripe.com/";
+        return;
+      }
+      Object.assign(meta, {
+        uni: t.uni,
+        program: t.program,
+        subjects: t.subjects,
+        vibe: t.vibe,
+        bio: t.bio,
+        pay_link: t.payLink,
+      });
     }
-    u.push(rec);
-    setU(u);
-    LS.set("cv_me", rec.id);
-    track("signup_" + role);
-    after();
+    const lock = (v) =>
+      $("#sf")
+        ?.querySelectorAll("button")
+        .forEach((b) => (b.disabled = v));
+    lock(true);
+    er.style.color = "var(--ink)";
+    er.textContent = "Creating your account…";
+    AUTH.busy++;
+    try {
+      const { data, error } = await sb.auth.signUp({
+        email: em,
+        password: pw,
+        options: {
+          data: meta,
+          emailRedirectTo: location.origin + location.pathname,
+        },
+      });
+      er.style.color = "";
+      if (error) {
+        er.textContent = authMsg(error);
+        return;
+      }
+      // Supabase hides "already registered" by returning a user with no identities.
+      if (data.user?.identities && data.user.identities.length === 0) {
+        er.textContent = "That email already has an account. Try logging in.";
+        return;
+      }
+      track("signup_" + role);
+      if (!data.session) {
+        // Email confirmation is switched on in Supabase: they must click the link first.
+        $("#sf").innerHTML =
+          `<h2>Check your email</h2><p>We sent a confirmation link to <b>${esc(em)}</b>. Click it, then <a href="#login">log in</a>.</p>${role === "tutor" ? '<p class="mut">After you log in, add your profile photo from your dashboard (Profile tab).</p>' : ""}`;
+        return;
+      }
+      await loadSession();
+      if (role === "tutor" && selectedFile && DB.me) {
+        er.style.color = "var(--ink)";
+        er.textContent = "Uploading photo…";
+        const url = await uploadTutorPhoto(selectedFile, DB.me.id);
+        if (url) await saveMine({ photo: url });
+      }
+      await Promise.all([loadPublic(), loadMine()]);
+      after();
+    } finally {
+      AUTH.busy--;
+      lock(false);
+    }
   };
 }
 // ===== BOOKING =====
@@ -749,9 +1129,13 @@ function book() {
       notes: "",
     });
   st._keep = 0;
-  if (m?.role === "tutor") {
+  if (m && m.role !== "student") {
     $("#app").innerHTML =
-      '<section class="pg"><div class="wrap"><h1 class="h">Booking is for students</h1><p>You are signed in as a tutor. Log out and use a student account to book sessions.</p><a class="btn" href="#account">Go to your dashboard</a></div></section>';
+      '<section class="pg"><div class="wrap"><h1 class="h">Booking is for students</h1><p>You are signed in as ' +
+      (m.role === "admin" ? "an admin" : "a tutor") +
+      '. Log out and use a student account to book sessions.</p><a class="btn" href="#' +
+      (m.role === "admin" ? "admin" : "account") +
+      '">Go to your dashboard</a></div></section>';
     return;
   }
   $("#app").innerHTML =
@@ -895,12 +1279,11 @@ function s3() {
     st.step = 2;
     step();
   };
-  $("#cf").onclick = () => {
+  $("#cf").onclick = async () => {
     st.notes = $("#nt").value;
     st.fm = $("#fm").value;
-    const bs = B(),
-      s = S(),
-      en = st.slot + s.len * 6e4;
+    const btn = $("#cf");
+    $("#e").textContent = "";
     if (slotsFor(t).indexOf(st.slot) < 0) {
       alert("Sorry, that time was just taken. Please pick another.");
       st.slot = null;
@@ -908,39 +1291,36 @@ function s3() {
       step();
       return;
     }
-    if (
-      bs.some(
-        (b) =>
-          b.student === m.id &&
-          b.status === "confirmed" &&
-          dkey(b.start, st.tz) === dkey(st.slot, st.tz),
-      )
-    ) {
-      $("#e").textContent = "You already have a session that day.";
+    btn.disabled = true;
+    // The database checks availability, double-booking, notice, and sets the price.
+    const { data, error } = await sb.rpc("create_booking", {
+      p_tutor: t.id,
+      p_subject: st.subject,
+      p_grade: st.grade,
+      p_start: new Date(st.slot).toISOString(),
+      p_format: st.fm,
+      p_notes: st.notes,
+      p_tz: st.tz,
+    });
+    if (error) {
+      btn.disabled = false;
+      if (
+        /just taken|too soon|available hours|not available then|off that day/i.test(
+          error.message,
+        )
+      ) {
+        alert(error.message);
+        await loadPublic();
+        st.slot = null;
+        st.step = 2;
+        step();
+        return;
+      }
+      $("#e").textContent = error.message || "Could not create the booking.";
       return;
     }
-    const b = {
-      id: "CV-" + rid("").toUpperCase(),
-      tutor: t.id,
-      tutorName: t.name,
-      student: m.id,
-      studentName: m.name,
-      email: m.email,
-      grade: st.grade,
-      subject: st.subject,
-      start: st.slot,
-      end: en,
-      format: st.fm,
-      notes: st.notes,
-      status: "confirmed",
-      paid: "unpaid",
-      amount: price(t),
-      created: Date.now(),
-      tz: st.tz,
-    };
-    bs.push(b);
-    setB(bs);
-    st.ref = b.id;
+    await Promise.all([loadMine(), loadPublic()]);
+    st.ref = data.id;
     track("booking_done");
     st.step = 4;
     step();
@@ -962,44 +1342,25 @@ function bindPay(root, cb) {
   root.querySelectorAll("[data-stripe]").forEach(
     (a) =>
       (a.onclick = async () => {
-        const bk = B().find((x) => x.id === a.dataset.stripe),
-          t = tut(bk.tutor),
-          old = a.textContent;
+        const old = a.textContent;
         a.disabled = true;
         a.textContent = "Opening Stripe…";
         try {
-          const d = await (
-            await fetch(CFG.checkoutUrl, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
+          // Only the booking reference is sent; the server looks up the real amount.
+          const { data: d, error } = await sb.functions.invoke(
+            "create-checkout",
+            {
+              body: {
                 action: "create",
-                ref: bk.id,
-                amount_cents: Math.round(bk.amount * 100),
-                tutor_name: bk.tutorName,
-                tutor_email: t?.email || "",
-                student_name: bk.studentName,
-                student_email: bk.email,
-                subject: bk.subject,
-                session_date: fmt(bk.start, bk.tz, { dateStyle: "full" }),
-                session_time: tm(bk.start, bk.tz),
-                email: bk.email,
+                ref: a.dataset.stripe,
                 path: location.pathname,
-                metadata: {
-                  studentEmail: bk.email,
-                  studentName: bk.studentName,
-                  tutorEmail: t?.email || "",
-                  tutorName: bk.tutorName,
-                  subject: bk.subject,
-                  date: fmt(bk.start, bk.tz, { dateStyle: "full" }),
-                  time: tm(bk.start, bk.tz),
-                  ref: bk.id,
-                },
-              }),
-            })
-          ).json();
-          if (!d.url) throw new Error(d.error || "No checkout link returned");
-          LS.set("cv_paying", bk.id);
+              },
+            },
+          );
+          if (error) throw new Error(await fnErr(error));
+          if (!d?.url || !/^https:\/\/checkout\.stripe\.com\//.test(d.url))
+            throw new Error(d?.error || "No checkout link returned");
+          LS.set("cv_paying", a.dataset.stripe);
           location.href = d.url;
         } catch (e) {
           alert("Could not start payment: " + e.message);
@@ -1015,18 +1376,26 @@ function bindPay(root, cb) {
     );
   root
     .querySelectorAll("[data-demo]")
-    .forEach((a) => (a.onclick = () => setPaid(a.dataset.demo, "paid", cb)));
+    .forEach((a) => (a.onclick = () => setPaid(a.dataset.demo, "review", cb)));
 }
-function setPaid(id, v, cb) {
-  const bs = B();
-  bs.find((x) => x.id === id).paid = v;
-  setB(bs);
+// Admins can set any status; students can only flag their own booking "awaiting confirmation".
+// A booking only becomes "paid" through the Stripe webhook/verification or an admin.
+async function setPaid(id, v, cb) {
+  const { error } = await sb.rpc("set_payment_status", {
+    p_id: id,
+    p_status: v,
+  });
+  if (error) {
+    alert("Could not update payment: " + error.message);
+    return;
+  }
+  await loadMine();
   cb();
 }
 function s4() {
   const b = B().find((x) => x.id === st.ref);
   $("#bs").innerHTML =
-    `<div class="done-wrap"><div class="okc" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><div class="burst" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></div><h2>You're booked. Now pay to lock it in.</h2><p>Reference <b>${b.id}</b>. Pay securely by credit card. ${CFG.stripeLink ? "" : '<span class="badge">Demo mode: no real payment is taken</span>'}</p><div class="row" id="pb">${payBtns(b)}<button class="btn alt" id="lt">Pay later</button></div><div id="pc"></div>`;
+    `<div class="done-wrap"><div class="okc" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><div class="burst" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></div><h2>You're booked. Now pay to lock it in.</h2><p>Reference <b>${b.id}</b>. Pay securely by credit card. ${CFG.checkoutUrl || CFG.stripeLink ? "" : '<span class="badge">Demo mode: no real payment is taken</span>'}</p><div class="row" id="pb">${payBtns(b)}<button class="btn alt" id="lt">Pay later</button></div><div id="pc"></div>`;
   const re = () => {
     if (
       B().find((x) => x.id === b.id).paid === "paid" ||
@@ -1072,54 +1441,47 @@ function s5() {
 }
 // ===== RETURN FROM STRIPE =====
 async function paid() {
-  const m = me(),
-    cs = new URLSearchParams(location.search).get("cs");
+  const cs = new URLSearchParams(location.search).get("cs");
   history.replaceState(null, "", location.pathname + "#paid");
-  const id = LS.get("cv_paying", null),
-    bs = B(),
-    b = bs.find((x) => x.id === id && x.student === m.id);
+  const id = LS.get("cv_paying", null);
   let msg =
     "We could not find a pending payment. If you were charged, contact Cultivar+.";
-  if (b && b.paid === "unpaid") {
-    if (cs && CFG.checkoutUrl) {
-      try {
-        const r = await fetch(CFG.checkoutUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "verify", session_id: cs }),
-          }),
-          d = await r.json();
-        if (
-          d.paid &&
-          d.ref === b.id &&
-          d.amount_cents === Math.round(b.amount * 100)
-        ) {
-          b.paid = "paid";
-          msg = "Payment confirmed. Thank you!";
-        } else
-          msg =
-            "We could not confirm your payment yet. If you were charged, contact Cultivar+.";
-      } catch (e) {
-        b.paid = "review";
-        msg = "Thanks! Your payment is being confirmed.";
-      }
-    } else {
-      b.paid = "review";
-      msg = "Thanks! Your payment is being confirmed. Your session is booked.";
+  if (cs) {
+    try {
+      // The server asks Stripe directly and checks the amount against the booking.
+      const { data: d, error } = await sb.functions.invoke("create-checkout", {
+        body: { action: "verify", session_id: cs },
+      });
+      if (error) throw new Error(await fnErr(error));
+      msg = d?.paid
+        ? "Payment confirmed. Thank you!"
+        : "We could not confirm your payment yet. If you were charged, contact Cultivar+.";
+    } catch (e) {
+      msg = "Thanks! Your payment is being confirmed.";
     }
-    setB(bs);
+  } else if (id) {
+    const { error } = await sb.rpc("set_payment_status", {
+      p_id: id,
+      p_status: "review",
+    });
+    if (!error)
+      msg = "Thanks! Your payment is being confirmed. Your session is booked.";
   }
   LS.set("cv_paying", null);
+  await loadMine();
   sessionStorage.cvmsg = msg;
   location.hash = "account";
 }
 // ===== DASHBOARDS =====
 let tab = "sessions";
-const cancel = (id) => {
+const cancel = async (id) => {
   if (!confirm("Cancel this session?")) return;
-  const bs = B();
-  bs.find((x) => x.id === id).status = "cancelled";
-  setB(bs);
+  const { error } = await sb.rpc("cancel_booking", { p_id: id });
+  if (error) {
+    alert(error.message);
+    return;
+  }
+  await Promise.all([loadMine(), loadPublic()]);
   go();
 };
 const when = (b, tz) =>
@@ -1188,34 +1550,34 @@ function account() {
   }
   if (tab === "avail") {
     el.innerHTML = `<p>Set your weekly hours (24h clock, ${esc(S().tz)}). Leave blank on days you're off. Students only see times inside these hours.</p><div class="grid">${DOW.map((n, i) => `<div class="card"><h3>${n}</h3><label>From</label><input type="number" min="0" max="23" data-h="${i}0" value="${m.avail?.[i]?.[0] ?? ""}"><label>To</label><input type="number" min="1" max="24" data-h="${i}1" value="${m.avail?.[i]?.[1] ?? ""}"></div>`).join("")}</div><button class="btn" id="sv" style="margin-top:18px">Save hours</button><h3 style="margin-top:32px">Days off</h3><div class="row"><input type="date" id="bd" style="width:auto"><button class="btn alt sm" id="bl">Block this date</button></div><div class="tags" style="margin-top:12px">${(m.blocked || []).map((d) => `<button class="tag x" data-u="${d}" aria-label="Remove ${d}">${d} ×</button>`).join("") || '<span class="mut">None</span>'}</div>`;
-    const upd = (f) => {
-      const u = U(),
-        x = u.find((y) => y.id === m.id);
-      f(x);
-      setU(u);
-    };
-    $("#sv").onclick = () => {
+    $("#sv").onclick = async () => {
       const h = {};
       for (let i = 0; i < 7; i++) {
         const a = $(`[data-h="${i}0"]`).value,
           b = $(`[data-h="${i}1"]`).value;
         h[i] = a !== "" && b !== "" && +b > +a ? [+a, +b] : null;
       }
-      upd((x) => (x.avail = h));
-      $("#sv").textContent = "Saved ✓";
+      if (await saveMine({ avail: h })) $("#sv").textContent = "Saved ✓";
     };
-    $("#bl").onclick = () => {
+    $("#bl").onclick = async () => {
       const d = $("#bd").value;
-      if (d) {
-        upd((x) => (x.blocked = [...new Set([...(x.blocked || []), d])]));
+      if (
+        d &&
+        (await saveMine({
+          blocked: [...new Set([...(me().blocked || []), d])],
+        }))
+      )
         account();
-      }
     };
     document.querySelectorAll("[data-u]").forEach(
       (b) =>
-        (b.onclick = () => {
-          upd((x) => (x.blocked = x.blocked.filter((y) => y !== b.dataset.u)));
-          account();
+        (b.onclick = async () => {
+          if (
+            await saveMine({
+              blocked: (me().blocked || []).filter((y) => y !== b.dataset.u),
+            })
+          )
+            account();
         }),
     );
   }
@@ -1227,29 +1589,44 @@ function account() {
     };
     $("#pf").onsubmit = async (e) => {
       e.preventDefault();
-      const er = $("#er");
+      const er = $("#er"),
+        cur = me();
       er.style.color = "";
-      let photoUrl = m.photo || "";
-      if (profileFile) {
-        er.style.color = "var(--ink)";
-        er.textContent = "Uploading new photo…";
-        photoUrl = await uploadTutorPhoto(profileFile, m.id);
-      }
-      const t = readTutor(photoUrl);
-      if (!t.subjects.length || t.bio.length < 20) {
+      const chk = readTutor(cur.photo || "");
+      if (!chk.subjects.length || chk.bio.length < 20) {
         er.style.color = "#b00020";
         er.textContent = "Add at least one subject and a short bio.";
         return;
       }
-      const u = U();
-      Object.assign(
-        u.find((y) => y.id === m.id),
-        t,
-        { name: $("#nm").value.trim() || m.name },
-      );
-      setU(u);
-      er.style.color = "#0a7a3d";
-      er.textContent = "Saved ✓";
+      if (chk.payLink && !PAY_LINK_RE.test(chk.payLink)) {
+        er.style.color = "#b00020";
+        er.textContent =
+          "Your payment link must be a Stripe link starting with https://buy.stripe.com/";
+        return;
+      }
+      let photoUrl = cur.photo || "";
+      if (profileFile) {
+        er.style.color = "var(--ink)";
+        er.textContent = "Uploading new photo…";
+        const uploadedUrl = await uploadTutorPhoto(profileFile, cur.id);
+        if (uploadedUrl) photoUrl = uploadedUrl;
+      }
+      const t = readTutor(photoUrl);
+      const ok = await saveMine({
+        name: $("#nm").value.trim() || cur.name,
+        uni: t.uni,
+        program: t.program,
+        subjects: t.subjects,
+        vibe: t.vibe,
+        bio: t.bio,
+        pay_link: t.payLink || null,
+        photo: t.photo || null,
+      });
+      if (ok) {
+        profileFile = null;
+        er.style.color = "#0a7a3d";
+        er.textContent = "Saved ✓";
+      } else er.textContent = "";
     };
   }
   if (tab === "earn") {
@@ -1264,12 +1641,13 @@ function account() {
 let atab = "b";
 function admin() {
   const bs = B().sort((a, b) => a.start - b.start),
-    an = LS.get("cv_an", {}),
+    an = DB.an,
     s = S();
   $("#app").innerHTML =
     `<section class="adm"><div class="wrap"><div class="row between"><h1 class="h" style="margin:0">Admin</h1></div><div class="tabs">${[
       ["b", "Bookings"],
       ["u", "Users"],
+      ["m", "Messages"],
       ["s", "Settings"],
     ]
       .map(
@@ -1289,7 +1667,7 @@ function admin() {
     const paidT = bs
       .filter((b) => b.paid === "paid" && b.status === "confirmed")
       .reduce((x, b) => x + b.amount, 0);
-    el.innerHTML = `<p class="note">Home views ${an.page_home || 0} · Book clicks ${an.book_click || 0} · Bookings ${an.booking_done || 0} · Sign-ups ${(an.signup_student || 0) + (an.signup_tutor || 0)} · Paid total ${money(paidT)}</p><div class="row" style="margin-bottom:14px"><button class="btn alt sm" id="csv">Export CSV</button></div><div class="tbl">${bs.length ? `<table><tr><th>Ref</th><th>When (${s.tz})</th><th>Tutor</th><th>Student</th><th>Status</th><th>Payment</th><th></th></tr>${bs.map((b) => `<tr><td>${b.id}</td><td>${fmt(b.start, s.tz, { dateStyle: "medium", timeStyle: "short" })}</td><td>${esc(b.tutorName)}</td><td>${esc(b.studentName)}<br><small>${esc(b.email)}</small></td><td>${b.status}</td><td>${b.paid}</td><td class="act">${b.paid !== "paid" && b.status === "confirmed" ? `<button class="btn sm" data-p="${b.id}">Mark paid</button>` : ""}${b.status === "confirmed" ? `<button class="btn alt sm" data-c="${b.id}">Cancel</button>` : ""}</td></tr>`).join("")}</table>` : '<p style="padding:16px">No bookings yet.</p>'}</div>`;
+    el.innerHTML = `<p class="note">Home views ${an.page_home || 0} · Book clicks ${an.book_click || 0} · Bookings ${an.booking_done || 0} · Sign-ups ${(an.signup_student || 0) + (an.signup_tutor || 0)} · Paid total ${money(paidT)}</p><div class="row" style="margin-bottom:14px"><button class="btn alt sm" id="csv">Export CSV</button></div><div class="tbl">${bs.length ? `<table><tr><th>Ref</th><th>When (${esc(s.tz)})</th><th>Tutor</th><th>Student</th><th>Status</th><th>Payment</th><th></th></tr>${bs.map((b) => `<tr><td>${b.id}</td><td>${fmt(b.start, s.tz, { dateStyle: "medium", timeStyle: "short" })}</td><td>${esc(b.tutorName)}</td><td>${esc(b.studentName)}<br><small>${esc(b.email)}</small></td><td>${b.status}</td><td>${b.paid}</td><td class="act">${b.paid !== "paid" && b.status === "confirmed" ? `<button class="btn sm" data-p="${b.id}">Mark paid</button>` : ""}${b.status === "confirmed" ? `<button class="btn alt sm" data-c="${b.id}">Cancel</button>` : ""}</td></tr>`).join("")}</table>` : '<p style="padding:16px">No bookings yet.</p>'}</div>`;
     document
       .querySelectorAll("[data-p]")
       .forEach((x) => (x.onclick = () => setPaid(x.dataset.p, "paid", admin)));
@@ -1349,11 +1727,14 @@ function admin() {
         r = U().filter((x) => !f || x.role === f);
       $("#ut").innerHTML =
         `<table><tr><th>Name</th><th>Role</th><th>Email</th><th>Details</th><th>Upcoming</th><th>Status</th><th></th></tr>${r.map((x) => `<tr><td>${esc(x.name)}</td><td>${x.role}</td><td>${esc(x.email)}</td><td>${x.role === "tutor" ? esc(x.uni + ", " + x.program) + "<br><small>" + money(rateOf(x)) + "/hr</small>" : gl(x.grade)}</td><td>${cnt(x.id)}</td><td>${x.status === "suspended" ? '<span class="badge">Suspended</span>' : '<span class="badge ok">Active</span>'}</td><td class="act"><button class="btn alt sm" data-e="${x.id}">Edit</button><button class="btn alt sm" data-s="${x.id}">${x.status === "suspended" ? "Activate" : "Suspend"}</button><button class="btn alt sm" data-k="${x.id}">Reset password</button><button class="btn alt sm" data-r="${x.id}">Remove</button></td></tr>`).join("") || '<tr><td colspan="7">No accounts yet.</td></tr>'}</table>`;
-      const upd = (id, fn) => {
-        const a = U();
-        fn(a.find((x) => x.id === id));
-        setU(a);
-        draw();
+      const run = async (fn) => {
+        try {
+          await fn();
+          await Promise.all([loadAdmin(), loadMine(), loadPublic()]);
+          draw();
+        } catch (e) {
+          alert(e.message || "Something went wrong.");
+        }
       };
       document
         .querySelectorAll("[data-e]")
@@ -1361,18 +1742,18 @@ function admin() {
           (b) =>
             (b.onclick = () => form(U().find((x) => x.id === b.dataset.e))),
         );
-      document
-        .querySelectorAll("[data-s]")
-        .forEach(
-          (b) =>
-            (b.onclick = () =>
-              upd(
-                b.dataset.s,
-                (x) =>
-                  (x.status =
-                    x.status === "suspended" ? "active" : "suspended"),
-              )),
-        );
+      document.querySelectorAll("[data-s]").forEach(
+        (b) =>
+          (b.onclick = () => {
+            const x = U().find((y) => y.id === b.dataset.s);
+            run(() =>
+              adminFn("set_status", {
+                id: x.id,
+                status: x.status === "suspended" ? "active" : "suspended",
+              }),
+            );
+          }),
+      );
       document.querySelectorAll("[data-k]").forEach(
         (b) =>
           (b.onclick = async () => {
@@ -1382,10 +1763,12 @@ function admin() {
               alert("Too short.");
               return;
             }
-            const x = U().find((y) => y.id === b.dataset.k),
-              h = await hp(x.email, p);
-            upd(x.id, (y) => (y.pw = h));
-            alert("Password updated. Share it with the user securely.");
+            try {
+              await adminFn("set_password", { id: b.dataset.k, password: p });
+              alert("Password updated. Share it with the user securely.");
+            } catch (e) {
+              alert(e.message || "Could not update the password.");
+            }
           }),
       );
       document.querySelectorAll("[data-r]").forEach(
@@ -1400,18 +1783,7 @@ function admin() {
               )
             )
               return;
-            const bs = B();
-            bs.forEach((y) => {
-              if (
-                y.status === "confirmed" &&
-                y.end > Date.now() &&
-                (y.student === x.id || y.tutor === x.id)
-              )
-                y.status = "cancelled";
-            });
-            setB(bs);
-            setU(U().filter((y) => y.id !== x.id));
-            draw();
+            run(() => adminFn("delete", { id: x.id }));
           }),
       );
     };
@@ -1431,65 +1803,87 @@ function admin() {
         e.preventDefault();
         const er = $("#er"),
           nm = $("#nm").value.trim(),
-          em = $("#em").value.trim().toLowerCase(),
-          a = U();
-        if (!nm || !/^\S+@\S+\.\S+$/.test(em)) {
+          em = $("#em").value.trim().toLowerCase();
+        if (!nm || !EMAIL_RE.test(em)) {
           er.textContent = "Add a name and valid email.";
           return;
         }
-        if (
-          a.some((y) => y.email === em && y.id !== x.id) ||
-          em === CFG.admin.email
-        ) {
+        if (U().some((y) => y.email === em && y.id !== x.id)) {
           er.textContent = "That email is already used.";
           return;
         }
-        const targetId = x.id || rid(role === "tutor" ? "u" : "s");
-        let photoUrl = x.photo || "";
         er.style.color = "";
-        if (role === "tutor" && adminFile) {
-          er.style.color = "var(--ink)";
-          er.textContent = "Uploading photo…";
-          photoUrl = await uploadTutorPhoto(adminFile, targetId);
-          er.style.color = "";
-          er.textContent = "";
-        }
-        let rec = { ...x, name: nm, email: em };
+        const rec = { name: nm };
+        if (nu || em !== x.email) rec.email = em;
         if (role === "student") rec.grade = +$("#gr").value;
         else {
-          const t = readTutor(photoUrl);
+          const t = readTutor(x.photo || "");
           if (!t.uni || !t.program || !t.subjects.length || t.bio.length < 20) {
             er.textContent =
               "Tutor needs university, program, a subject and a short bio.";
             return;
           }
-          Object.assign(rec, t);
-          const r = $("#rO").value;
-          rec.rate = r === "" ? undefined : +r;
-          if (nu) Object.assign(rec, { avail: DA, blocked: [] });
-        }
-        if (nu) {
-          const p = $("#tp").value;
-          if (p.length < 8) {
-            er.textContent = "Temporary password must be 8+ characters.";
+          if (t.payLink && !PAY_LINK_RE.test(t.payLink)) {
+            er.textContent =
+              "Payment link must be a Stripe link starting with https://buy.stripe.com/";
             return;
           }
           Object.assign(rec, {
-            id: targetId,
-            pw: await hp(em, p),
-            created: Date.now(),
+            uni: t.uni,
+            program: t.program,
+            subjects: t.subjects,
+            vibe: t.vibe,
+            bio: t.bio,
+            pay_link: t.payLink || null,
           });
-          a.push(rec);
-        } else a[a.findIndex((y) => y.id === x.id)] = rec;
-        setU(a);
-        dg.close();
-        draw();
+          const r = $("#rO").value;
+          rec.rate = r === "" ? null : +r;
+        }
+        let tp = "";
+        if (nu) {
+          tp = $("#tp").value;
+          if (tp.length < 8) {
+            er.textContent = "Temporary password must be 8+ characters.";
+            return;
+          }
+        }
+        const sv = $("#sv");
+        sv.disabled = true;
+        try {
+          let id = x.id;
+          if (nu)
+            id = (await adminFn("create", { role, password: tp, ...rec })).id;
+          else await adminFn("update", { id, ...rec });
+          if (role === "tutor" && adminFile) {
+            er.style.color = "var(--ink)";
+            er.textContent = "Uploading photo…";
+            const url = await uploadTutorPhoto(adminFile, id);
+            if (url) await adminFn("update", { id, photo: url });
+          }
+          await Promise.all([loadAdmin(), loadPublic(), loadMine()]);
+          dg.close();
+          draw();
+        } catch (err) {
+          er.style.color = "";
+          er.textContent = err.message || "Could not save.";
+          sv.disabled = false;
+        }
       };
     };
     $("#at_").onclick = () => form({ role: "tutor" });
     $("#as_").onclick = () => form({ role: "student" });
     $("#uf").onchange = draw;
     draw();
+  }
+  if (atab === "m") {
+    el.innerHTML = DB.messages.length
+      ? `<div class="tbl"><table><tr><th>Received</th><th>From</th><th>Message</th></tr>${DB.messages
+          .map(
+            (x) =>
+              `<tr><td>${fmt(Date.parse(x.created_at), s.tz, { dateStyle: "medium", timeStyle: "short" })}</td><td>${esc(x.name)}<br><small><a href="mailto:${esc(x.email)}">${esc(x.email)}</a></small></td><td style="white-space:pre-wrap">${esc(x.message)}</td></tr>`,
+          )
+          .join("")}</table></div>`
+      : '<p class="mut">No messages yet.</p>';
   }
   if (atab === "s") {
     el.innerHTML = `<div class="two" style="max-width:640px">${[
@@ -1505,34 +1899,47 @@ function admin() {
       )
       .join(
         "",
-      )}<div><label for="s_tz">Business time zone</label><input id="s_tz" value="${s.tz}"></div><div><label for="s_link">Meeting link</label><input id="s_link" value="${esc(s.link)}"></div></div><button class="btn" id="ss" style="margin-top:16px">Save settings</button><h2 style="margin-top:40px;font-size:1.5rem">Admin account</h2><p class="mut">Signed in as ${CFG.admin.email}. Change the admin password here.</p><div class="two" style="max-width:640px"><div><label for="ap">New password (8+ characters)</label><input id="ap" type="password" autocomplete="new-password"></div><div><label for="ap2">Confirm</label><input id="ap2" type="password" autocomplete="new-password"></div></div><button class="btn alt" id="cp" style="margin-top:16px">Change admin password</button>`;
+      )}<div><label for="s_tz">Business time zone</label><input id="s_tz" value="${esc(s.tz)}"></div><div><label for="s_link">Meeting link</label><input id="s_link" value="${esc(s.link)}"></div></div><button class="btn" id="ss" style="margin-top:16px">Save settings</button><h2 style="margin-top:40px;font-size:1.5rem">Admin account</h2><p class="mut">Signed in as ${esc(me().email)}. Change the admin password here.</p><div class="two" style="max-width:640px"><div><label for="ap">New password (8+ characters)</label><input id="ap" type="password" autocomplete="new-password"></div><div><label for="ap2">Confirm</label><input id="ap2" type="password" autocomplete="new-password"></div></div><button class="btn alt" id="cp" style="margin-top:16px">Change admin password</button>`;
     $("#cp").onclick = async () => {
       const p = $("#ap").value;
       if (p.length < 8 || p !== $("#ap2").value) {
         alert("Passwords must match and be 8+ characters.");
         return;
       }
-      LS.set("cv_admin", { hash: await sha(p) });
+      const { error } = await sb.auth.updateUser({ password: p });
+      if (error) {
+        alert("Could not change password: " + error.message);
+        return;
+      }
       $("#ap").value = $("#ap2").value = "";
       alert("Admin password changed.");
     };
-    $("#ss").onclick = () => {
+    $("#ss").onclick = async () => {
       try {
         new Intl.DateTimeFormat("en", { timeZone: $("#s_tz").value });
       } catch (e) {
         alert("Invalid time zone");
         return;
       }
-      LS.set("cv_set", {
-        ...LS.get("cv_set", {}),
-        rate: +$("#s_rate").value || 40,
-        len: +$("#s_len").value || 60,
-        buf: +$("#s_buf").value,
-        notice: +$("#s_notice").value,
-        window: +$("#s_window").value || 60,
-        tz: $("#s_tz").value,
-        link: $("#s_link").value,
+      const link = $("#s_link").value.trim();
+      if (!/^https?:\/\/[^\s"<>]+$/.test(link)) {
+        alert("The meeting link must start with http:// or https://");
+        return;
+      }
+      const { error } = await sb.rpc("admin_save_settings", {
+        p_rate: +$("#s_rate").value || 40,
+        p_len: +$("#s_len").value || 60,
+        p_buf: +$("#s_buf").value || 0,
+        p_notice: +$("#s_notice").value || 0,
+        p_window: +$("#s_window").value || 60,
+        p_tz: $("#s_tz").value,
+        p_link: link,
       });
+      if (error) {
+        alert("Could not save: " + error.message);
+        return;
+      }
+      await Promise.all([loadPublic(), loadMine()]);
       alert("Saved");
     };
   }
@@ -1542,4 +1949,43 @@ addEventListener(
   () => $("header").classList.toggle("sc", scrollY > 8),
   { passive: true },
 );
-go();
+(async function init() {
+  // Remove the old browser-only data. It held password hashes and test records,
+  // and the real data now lives in Supabase.
+  ["cv_u", "cv_b", "cv_me", "cv_admin", "cv_set", "cv_msg", "cv_an"].forEach(
+    (k) => {
+      try {
+        localStorage.removeItem(k);
+      } catch (_) {}
+    },
+  );
+  const app = $("#app");
+  if (!sb) {
+    app.innerHTML =
+      '<section class="pg"><div class="wrap"><h1 class="h">We can’t load right now</h1><p>Please refresh the page. If this keeps happening, contact Cultivar+.</p></div></section>';
+    return;
+  }
+  app.innerHTML =
+    '<section class="pg"><div class="wrap"><p class="mut" role="status">Loading…</p></div></section>';
+  try {
+    await boot();
+  } catch (e) {
+    console.error(e);
+  }
+  // React to sign-in/out that happens elsewhere (another tab, expired session, email link).
+  sb.auth.onAuthStateChange((ev, session) => {
+    if (AUTH.busy) return;
+    if (ev === "SIGNED_OUT" && DB.me)
+      setTimeout(() => {
+        resetSession();
+        nav();
+        go();
+      }, 0);
+    else if (ev === "SIGNED_IN" && session && !DB.me)
+      setTimeout(async () => {
+        await boot();
+        go();
+      }, 0);
+  });
+  go();
+})();

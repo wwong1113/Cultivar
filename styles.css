@@ -193,25 +193,50 @@ header .wrap {
   justify-content: space-between;
   height: 76px;
   gap: 16px;
+  padding-left: 0; /* Clears container padding so the logo touches the left edge */
 }
+
 header .wrap > a {
   display: flex;
   align-items: center;
   flex: none;
+  height: 56px;
+  width: 240px;
+  overflow: hidden;
+  justify-content: flex-start; /* Aligns contents flush left */
 }
 
 header img {
-  height: 42px;
-  width: auto;
-  max-width: min(220px, 42vw);
-  object-fit: contain;
+  height: 180px;
+  width: 320px;
+  max-width: none;
+  object-fit: cover;
+  object-position: left center; /* Shifts the zoomed text to start at the left edge */
   display: block;
+  mix-blend-mode: multiply;
+  margin-left: -20px; /* Pulls out remaining inner white padding of the image */
+  transition:
+    opacity 0.2s var(--ease),
+    transform 0.2s var(--ease);
+}
+
+header img:hover {
+  opacity: 0.85;
+  transform: scale(1.03);
 }
 
 @media (max-width: 900px) {
+  header .wrap {
+    padding-left: 0;
+  }
+  header .wrap > a {
+    height: 44px;
+    width: 180px;
+  }
   header img {
-    height: 34px;
-    max-width: 160px;
+    height: 140px;
+    width: 250px;
+    margin-left: -15px;
   }
 }
 

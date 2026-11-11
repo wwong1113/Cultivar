@@ -1,146 +1,162 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@12.0.0?target=deno";
-import nodemailer from "npm:nodemailer@^6.9.0";
+// Stripe -> Supabase webhook. This is the authoritative way a booking becomes "paid",
+// so it works even if the customer closes the tab before returning to your site.
+//
+// Deploy WITHOUT JWT verification (Stripe doesn't send one; we verify Stripe's signature):
+//   supabase functions deploy stripe-webhook --no-verify-jwt
+// Secrets needed: STRIPE_WEBHOOK_SECRET  (optional: CURRENCY=cad)
+// Stripe Dashboard -> Developers -> Webhooks -> add endpoint:
+//   https://<project-ref>.supabase.co/functions/v1/stripe-webhook
+//   events: checkout.session.completed, checkout.session.async_payment_succeeded
+import { createClient } from "npm:@supabase/supabase-js@2";
 
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") ?? "", {
-  apiVersion: "2022-11-15",
-  httpClient: Stripe.createFetchHttpClient(),
-});
+// ---- shared helpers (inlined so this function is self-contained) ----
+const SITE_URL = (Deno.env.get("SITE_URL") ?? "").replace(/\/+$/, "");
+const EXTRA = (Deno.env.get("EXTRA_ORIGINS") ?? "")
+  .split(",")
+  .map((s) => s.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+const ALLOWED = [SITE_URL, ...EXTRA].filter(Boolean);
 
-const endpointSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "";
-const gmailUser = Deno.env.get("GMAIL_USER") ?? "";
-const gmailPass = Deno.env.get("GMAIL_PASS") ?? "";
+/** CORS: only reflect origins you've allowed (SITE_URL + optional EXTRA_ORIGINS, e.g. http://localhost:5500). */
+function corsHeaders(origin: string | null): Record<string, string> {
+  const ok = origin && ALLOWED.includes(origin.replace(/\/+$/, ""));
+  return {
+    "Access-Control-Allow-Origin": ok ? origin! : SITE_URL || "null",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    Vary: "Origin",
+  };
+}
 
-// Public URL for your logo hosted on Vercel
-const LOGO_URL = "https://cultivar-website.vercel.app/assets/logo.png";
+function json(headers: Record<string, string>, body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...headers, "Content-Type": "application/json" },
+  });
+}
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: gmailUser,
-    pass: gmailPass,
-  },
-});
+/** Service-role client: bypasses RLS. Never expose this key to the browser. */
+const adminClient = () =>
+  createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+    },
+  );
 
-serve(async (req: Request) => {
-  const signature = req.headers.get("stripe-signature");
+/** Verify the caller's access token and return their user (or null). */
+async function getCaller(req: Request, admin = adminClient()) {
+  const token = (req.headers.get("Authorization") ?? "").replace(
+    /^Bearer\s+/i,
+    "",
+  );
+  if (!token) return null;
+  const { data, error } = await admin.auth.getUser(token);
+  return error || !data?.user ? null : data.user;
+}
+// ---- end helpers ----
 
-  if (!signature) {
-    return new Response("Missing stripe-signature header", { status: 400 });
+const SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "";
+const CURRENCY = (Deno.env.get("CURRENCY") ?? "cad").toLowerCase();
+
+function safeEqual(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+}
+
+async function validSignature(
+  payload: string,
+  header: string,
+  tolerance = 300,
+) {
+  let t = "";
+  const v1: string[] = [];
+  for (const part of header.split(",")) {
+    const [k, v] = part.split("=");
+    if (k === "t") t = v;
+    if (k === "v1") v1.push(v);
+  }
+  if (!t || !v1.length || Math.abs(Date.now() / 1000 - Number(t)) > tolerance)
+    return false;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(SECRET),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const mac = new Uint8Array(
+    await crypto.subtle.sign(
+      "HMAC",
+      key,
+      new TextEncoder().encode(`${t}.${payload}`),
+    ),
+  );
+  const hex = [...mac].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return v1.some((sig) => safeEqual(sig, hex));
+}
+
+Deno.serve(async (req) => {
+  if (req.method !== "POST")
+    return new Response("Method not allowed", { status: 405 });
+  if (!SECRET) return new Response("Webhook not configured", { status: 500 });
+
+  const payload = await req.text();
+  if (
+    !(await validSignature(payload, req.headers.get("stripe-signature") ?? ""))
+  ) {
+    return new Response("Invalid signature", { status: 400 });
   }
 
+  let event: any;
   try {
-    const body = await req.text();
-    const event = await stripe.webhooks.constructEventAsync(
-      body,
-      signature,
-      endpointSecret,
-    );
+    event = JSON.parse(payload);
+  } catch {
+    return new Response("Bad JSON", { status: 400 });
+  }
 
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object as any;
-      const metadata = session.metadata || {};
-
-      const studentEmail =
-        session.customer_details?.email ||
-        metadata.studentEmail ||
-        metadata.student_email;
-      const studentName =
-        session.customer_details?.name ||
-        metadata.studentName ||
-        metadata.student_name ||
-        "Student";
-      const studentFirstName = studentName.split(" ")[0];
-
-      const tutorEmail = metadata.tutorEmail || metadata.tutor_email;
-      const tutorName = metadata.tutorName || metadata.tutor_name || "Tutor";
-      const tutorFirstName = tutorName.split(" ")[0];
-
-      const subjectName = metadata.subject || "Tutoring Session";
-      const sessionDate =
-        metadata.date ||
-        metadata.session_date ||
-        metadata.sessionDate ||
-        "Scheduled Date";
-      const sessionTime =
-        metadata.time ||
-        metadata.session_time ||
-        metadata.sessionTime ||
-        "Scheduled Time";
-
-      // 1. Send confirmation email to Student
-      if (studentEmail) {
-        const studentHtmlContent = `
-          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px;">
-            <p>Hi ${studentFirstName},</p>
-            <p>Your tutoring session is confirmed!</p>
-            <p>
-              <strong>Tutor:</strong> ${tutorName}<br>
-              <strong>Subject:</strong> ${subjectName}<br>
-              <strong>Date:</strong> ${sessionDate}<br>
-              <strong>Time:</strong> ${sessionTime}
-            </p>
-            <p>Your tutor will contact you by email with the Zoom link for your session.</p>
-            <p>Please keep an eye on your inbox before your scheduled time.</p>
-            <p>We’re looking forward to your session!</p>
-            <p><strong>Cultivar</strong></p>
-            <div style="margin-top: 20px;">
-              <img src="${LOGO_URL}" alt="cultivar+" style="height: 40px; width: auto;" />
-            </div>
-          </div>
-        `;
-
-        await transporter.sendMail({
-          from: `"Cultivar" <${gmailUser}>`,
-          to: studentEmail,
-          subject: "Your Tutoring Session is Confirmed - Cultivar",
-          html: studentHtmlContent,
-        });
-        console.log(`Student email sent to ${studentEmail}`);
-      }
-
-      // 2. Send notification email to Tutor
-      if (tutorEmail) {
-        const tutorHtmlContent = `
-          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px;">
-            <p>Hi ${tutorFirstName},</p>
-            <p>You have a new tutoring session booked.</p>
-            <p>
-              <strong>Student:</strong> ${studentName}<br>
-              <strong>Subject:</strong> ${subjectName}<br>
-              <strong>Date:</strong> ${sessionDate}<br>
-              <strong>Time:</strong> ${sessionTime}
-            </p>
-            <p>Please email the student at <a href="mailto:${studentEmail}">${studentEmail}</a> before the session and send them your Zoom link.</p>
-            <p>Make sure to double-check the date and time and arrive prepared for the session.</p>
-            <p>If there are any issues with the booking, please contact us as soon as possible.</p>
-            <p>Thanks,<br><strong>Cultivar</strong></p>
-            <div style="margin-top: 20px;">
-              <img src="${LOGO_URL}" alt="cultivar+" style="height: 40px; width: auto;" />
-            </div>
-          </div>
-        `;
-
-        await transporter.sendMail({
-          from: `"Cultivar" <${gmailUser}>`,
-          to: tutorEmail,
-          subject: "New Session Booked - Cultivar",
-          html: tutorHtmlContent,
-        });
-        console.log(`Tutor email sent to ${tutorEmail}`);
-      } else {
-        console.warn(
-          "Warning: tutorEmail metadata missing. Skipped sending tutor email.",
+  if (
+    event.type === "checkout.session.completed" ||
+    event.type === "checkout.session.async_payment_succeeded"
+  ) {
+    const s = event.data?.object ?? {};
+    if (s.payment_status === "paid") {
+      const admin = adminClient();
+      const ref = String(s.client_reference_id ?? s.metadata?.ref ?? "");
+      const { data: b } = await admin
+        .from("bookings")
+        .select("id, amount, paid")
+        .eq("id", ref)
+        .maybeSingle();
+      if (
+        b &&
+        b.paid !== "paid" &&
+        s.amount_total === Math.round(Number(b.amount) * 100) &&
+        String(s.currency).toLowerCase() === CURRENCY
+      ) {
+        const { error } = await admin
+          .from("bookings")
+          .update({ paid: "paid" })
+          .eq("id", b.id);
+        if (error) {
+          console.error(error);
+          return new Response("DB error", { status: 500 });
+        } // Stripe will retry
+      } else if (b && b.paid !== "paid") {
+        console.error(
+          "Amount/currency mismatch for",
+          ref,
+          s.amount_total,
+          s.currency,
         );
       }
     }
-
-    return new Response(JSON.stringify({ received: true }), {
-      headers: { "Content-Type": "application/json" },
-      status: 200,
-    });
-  } catch (err: any) {
-    console.error("Webhook processing error:", err.message);
-    return new Response(`Webhook Error: ${err.message}`, { status: 400 });
   }
+  return new Response(JSON.stringify({ received: true }), {
+    headers: { "Content-Type": "application/json" },
+  });
 });
