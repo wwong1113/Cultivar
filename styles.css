@@ -964,44 +964,9 @@ input[readonly] {
   color: var(--mut);
 }
 
-.qg {
-  display: grid;
-  grid-template-columns: 1.3fr 1fr;
-  grid-template-rows: auto auto;
-  gap: 22px;
-}
-
-.q {
-  padding: 32px;
-  border-radius: 24px;
-  background: var(--surf);
-  border: 1px solid var(--line);
-}
-
-.q:first-child {
-  grid-row: span 2;
-  background: var(--glow);
-  border: 0;
-  color: #fff;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.q:first-child blockquote {
-  font:
-    700 clamp(1.5rem, 2.6vw, 2.2rem)/1.2 Gabarito,
-    sans-serif;
-  letter-spacing: -0.01em;
-}
-
 blockquote {
   margin: 0;
   font-size: 1.1rem;
-}
-
-.q:first-child cite {
-  color: rgba(255, 255, 255, 0.78);
 }
 
 cite {
@@ -1593,9 +1558,6 @@ tr:last-child td {
   }
   .band .gb {
     justify-content: flex-start;
-  }
-  .q:first-child {
-    grid-row: auto;
   }
   .lg .pane {
     padding: 40px 24px;
@@ -2226,7 +2188,28 @@ dialog h2 {
 }
 
 select {
-  padding-right: 36px;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 48px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23a79da2' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 18px center;
+  background-size: 12px 8px;
+  cursor: pointer;
+}
+
+select:hover {
+  border-color: var(--line2);
+}
+
+select option {
+  background: var(--surf2);
+  color: var(--ink);
+}
+
+.tz select {
+  padding: 6px 34px 6px 10px;
+  background-position: right 12px center;
 }
 
 .intro {
@@ -2317,16 +2300,14 @@ select {
 
 /* the gradient panels echo the Crimson Noir card: a faint diagonal sheen */
 .cta,
-.lg .pane,
-.q:first-child {
+.lg .pane {
   position: relative;
   overflow: hidden;
   isolation: isolate;
 }
 
 .cta::before,
-.lg .pane::before,
-.q:first-child::before {
+.lg .pane::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -2375,4 +2356,167 @@ details summary:hover {
 table td small,
 .pk small {
   color: var(--mut);
+}
+
+/* ===== v6: testimonials ===== */
+.qg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 40px;
+  border-top: 1px solid var(--line);
+}
+
+.q {
+  margin: 0;
+  position: relative;
+}
+
+.q .qm {
+  display: block;
+  fill: currentColor;
+}
+
+.q.lead {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: 0 36px;
+  padding: 56px 0 52px;
+  border-bottom: 1px solid var(--line);
+  isolation: isolate;
+}
+
+.q.lead::before {
+  content: "";
+  position: absolute;
+  left: -160px;
+  top: 0;
+  width: 720px;
+  height: 100%;
+  background: radial-gradient(
+    closest-side,
+    rgba(197, 3, 55, 0.18),
+    transparent
+  );
+  z-index: -1;
+  pointer-events: none;
+}
+
+.q.lead .qm {
+  width: 72px;
+  margin-top: 8px;
+  color: var(--red);
+}
+
+.q.lead blockquote {
+  font:
+    700 clamp(2rem, 4.4vw, 3.4rem)/1.1 Gabarito,
+    Onest,
+    sans-serif;
+  letter-spacing: -0.025em;
+  max-width: 24ch;
+  text-wrap: balance;
+}
+
+.q.lead figcaption {
+  grid-column: 2;
+}
+
+.q:not(.lead) {
+  padding: 40px 48px 8px 0;
+}
+
+.q:not(.lead) + .q:not(.lead) {
+  padding: 40px 0 8px 48px;
+  border-left: 1px solid var(--line);
+}
+
+.q:not(.lead) .qm {
+  width: 28px;
+  margin-bottom: 18px;
+  color: var(--rose);
+}
+
+.q:not(.lead) blockquote {
+  font:
+    600 clamp(1.25rem, 2vw, 1.55rem)/1.35 Gabarito,
+    Onest,
+    sans-serif;
+  letter-spacing: -0.01em;
+  max-width: 28ch;
+  text-wrap: pretty;
+}
+
+.q figcaption {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 24px;
+  font-size: 0.95rem;
+  color: var(--mut);
+}
+
+.q figcaption::before {
+  content: "";
+  width: 28px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--red);
+}
+
+.q figcaption b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* the quote mark lands as each testimonial scrolls in */
+html.js .q.rv .qm {
+  opacity: 0;
+  transform: translateY(10px) scale(0.7) rotate(-10deg);
+  transform-origin: left bottom;
+}
+
+html.js .q.rv.vis .qm {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.6s var(--ease) calc(var(--d, 0ms) + 200ms),
+    transform 0.9s var(--ease) calc(var(--d, 0ms) + 200ms);
+}
+
+@media (max-width: 900px) {
+  .qg {
+    grid-template-columns: 1fr;
+  }
+  .q.lead {
+    grid-template-columns: 1fr;
+    padding: 40px 0;
+  }
+  .q.lead .qm {
+    width: 48px;
+    margin: 0 0 18px;
+  }
+  .q.lead figcaption {
+    grid-column: auto;
+  }
+  .q:not(.lead),
+  .q:not(.lead) + .q:not(.lead) {
+    padding: 32px 0;
+    border-left: 0;
+  }
+  .q:not(.lead) + .q:not(.lead) {
+    border-top: 1px solid var(--line);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.js .q.rv .qm {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.voices {
+  overflow: hidden;
 }

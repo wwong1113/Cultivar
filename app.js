@@ -197,8 +197,9 @@ const C = {
     "Biology",
     "Chemistry",
     "Physics",
+    "Business",
     "Economics",
-    "English / Writing",
+    "English",
     "Other subjects",
   ],
   help: [
@@ -212,7 +213,10 @@ const C = {
       ],
     ],
     ["Sciences", ["Grade 9–10 Science", "Biology", "Chemistry", "Physics"]],
-    ["English & Business", ["English / Writing", "Economics"]],
+    [
+      "English & Business",
+      ["English", "Business", "Economics", "Other high school subjects"],
+    ],
     [
       "Beyond the classroom",
       [
@@ -256,7 +260,7 @@ const C = {
       "Current university students who recently took the same high school courses and went through the application process.",
     ],
   ],
-  email: "hello@cultivar.example",
+  email: "cultivarplus@gmail.com",
   phone: "(000) 000-0000",
 };
 // ===== DATA LAYER =====
@@ -318,7 +322,10 @@ const mapProfile = (p) => ({
   grade: p.grade,
   uni: p.uni || "",
   program: p.program || "",
-  subjects: p.subjects || [],
+  // "English / Writing" was renamed to "English"; older profiles still store the old name
+  subjects: (p.subjects || []).map((s) =>
+    s === "English / Writing" ? "English" : s,
+  ),
   vibe: p.vibe || [],
   bio: p.bio || "",
   payLink: p.pay_link || "",
@@ -821,7 +828,12 @@ function home() {
 <section id="tutors-sec"><div class="wrap"><h2 class="center">Choose a mentor, not just a tutor</h2><p class="mut center">Pick by subject, university, program or personality. Every tutor is a real university student.</p><div class="tg" style="margin-top:36px">${T.length ? T.slice(0, 6).map(tcard).join("") : '<p class="mut center">New tutors are joining soon.</p>'}</div><p class="center" style="margin-top:32px"><a class="btn alt" href="#tutors">Browse all tutors</a></p></div></section>
 <section class="about"><div class="wrap"><h2>How it works</h2><div class="steps four"><div><h3>Browse tutors</h3><p class="mut">Filter by subject, university and interests.</p></div><div><h3>Read a profile</h3><p class="mut">Meet the person behind the subject.</p></div><div><h3>Book a time</h3><p class="mut">See live availability and pick a slot.</p></div><div><h3>Pay and learn</h3><p class="mut">Pay by card after booking, then meet online.</p></div></div></div></section>
 <section><div class="wrap"><h2 class="center">What we help with</h2><p class="mut center">Senior-level courses, plus the things school doesn’t always teach.</p><div class="help">${C.help.map(([h, items]) => `<div><h3>${h}</h3><ul>${items.map((i) => `<li>${i}</li>`).join("")}</ul></div>`).join("")}</div></div></section>
-<section><div class="wrap"><h2>What students say</h2><div class="qg">${C.quotes.map((q) => `<div class="q"><blockquote>“${q[0]}”</blockquote><cite>${q[1]}</cite></div>`).join("")}</div></div></section>
+<section class="voices"><div class="wrap"><h2>What students say</h2><div class="qg">${C.quotes
+    .map((q, i) => {
+      const [who, ...rest] = q[1].split(", ");
+      return `<figure class="q${i ? "" : " lead"}"><svg class="qm" viewBox="0 0 48 36" aria-hidden="true"><path d="M0 36V22C0 9 7 2 19 0l2 5C14 7 11 12 11 18h9v18H0Zm27 0V22C27 9 34 2 46 0l2 5c-7 2-10 7-10 13h9v18H27Z"/></svg><blockquote>${q[0]}</blockquote><figcaption><b>${who}</b>${rest.length ? `<span>${rest.join(", ")}</span>` : ""}</figcaption></figure>`;
+    })
+    .join("")}</div></div></section>
 <section id="about" class="about"><div class="wrap split"><div><h2>Who we are</h2><div class="tags" style="margin-top:18px">${C.words.map((w) => `<span class="tag">${w}</span>`).join("")}</div></div><div>${C.overview.map((p) => `<p>${p}</p>`).join("")}<h3 style="margin-top:28px">Our mission</h3>${C.mission.map((p) => `<p>${p}</p>`).join("")}</div></div></section>
 <section id="faq"><div class="wrap split"><h2>Questions, answered</h2><div>${C.faq.map((f) => `<details><summary>${f[0]}</summary><p>${f[1]}</p></details>`).join("")}</div></div></section>
 <section class="cta" id="contact"><div class="wrap"><div><h2>Ready to grow?</h2><p>Find the tutor who feels right and book in minutes.</p><div class="row"><a class="btn white" href="#tutors">Find a tutor</a></div><p style="margin-top:24px">${C.email}<br>${C.phone}</p></div>
