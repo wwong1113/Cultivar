@@ -601,7 +601,7 @@ function slotsFor(t) {
 }
 // ===== UI PARTS =====
 const bloomSvg = () =>
-  `<svg class="bloom" viewBox="-60 -60 120 120" aria-hidden="true"><defs><linearGradient id="bg1" x1="0" x2="1"><stop offset="0" stop-color="#ff1a2e"/><stop offset="1" stop-color="#ff5fc0"/></linearGradient></defs><g fill="url(#bg1)">${[0, 90, 180, 270].map((r) => `<path transform="rotate(${r})" d="M0 -8C-26 -22 -22 -54 0 -56C22 -54 26 -22 0 -8Z"/>`).join("")}</g><circle r="11" fill="#ffb3d1"/></svg>`;
+  `<svg class="bloom" viewBox="-60 -60 120 120" aria-hidden="true"><defs><linearGradient id="bg1" x1="0" x2="1"><stop offset="0" stop-color="#6f2232"/><stop offset="1" stop-color="#c50337"/></linearGradient></defs><g fill="url(#bg1)">${[0, 90, 180, 270].map((r) => `<path transform="rotate(${r})" d="M0 -8C-26 -22 -22 -54 0 -56C22 -54 26 -22 0 -8Z"/>`).join("")}</g><circle r="11" fill="#ff6a8c"/></svg>`;
 const av = (t, c = "av") =>
   t.photo
     ? `<img class="${c} ph" src="${esc(t.photo)}" alt="${esc(t.name)}">`
@@ -810,7 +810,7 @@ function home() {
   ]
     .map(
       ([x, y, s, r, t]) =>
-        `<svg class="fp" style="--x:${x}%;--y:${y}%;--s:${s}px;--r:${r};--t:${t}s" viewBox="-30 -60 60 62" aria-hidden="true"><path d="M0 -4C-24 -18 -20 -54 0 -56C20 -54 24 -18 0 -4Z" fill="#ff5fc0"/></svg>`,
+        `<svg class="fp" style="--x:${x}%;--y:${y}%;--s:${s}px;--r:${r};--t:${t}s" viewBox="-30 -60 60 62" aria-hidden="true"><path d="M0 -4C-24 -18 -20 -54 0 -56C20 -54 24 -18 0 -4Z" fill="#c50337"/></svg>`,
     )
     .join("")}<div class="wrap"><div>${bloomSvg()}<h1 class="long">${C.tagline
     .split(" ")
@@ -819,11 +819,11 @@ function home() {
       " ",
     )}</h1><p class="sub">${C.sub}</p><div class="row"><a class="btn" href="#tutors">Meet our tutors</a><a class="btn alt" href="#book" data-track="book">Book a Session</a></div><ul class="facts">${C.facts.map((f) => `<li>${f}</li>`).join("")}</ul><p class="intro">${C.intro}</p></div><div class="stack">${T.length ? T.slice(0, 3).map(tcard).join("") : '<p class="mut">Tutors joining soon!</p>'}</div></div></section>
 <section id="tutors-sec"><div class="wrap"><h2 class="center">Choose a mentor, not just a tutor</h2><p class="mut center">Pick by subject, university, program or personality. Every tutor is a real university student.</p><div class="tg" style="margin-top:36px">${T.length ? T.slice(0, 6).map(tcard).join("") : '<p class="mut center">New tutors are joining soon.</p>'}</div><p class="center" style="margin-top:32px"><a class="btn alt" href="#tutors">Browse all tutors</a></p></div></section>
-<section id="about" class="about"><div class="wrap split"><div><h2>Who we are</h2><div class="tags" style="margin-top:18px">${C.words.map((w) => `<span class="tag">${w}</span>`).join("")}</div></div><div>${C.overview.map((p) => `<p>${p}</p>`).join("")}<h3 style="margin-top:28px">Our mission</h3>${C.mission.map((p) => `<p>${p}</p>`).join("")}</div></div></section>
-<section><div class="wrap"><h2 class="center">What we help with</h2><p class="mut center">Senior-level courses, plus the things school doesn’t always teach.</p><div class="help">${C.help.map(([h, items]) => `<div><h3>${h}</h3><ul>${items.map((i) => `<li>${i}</li>`).join("")}</ul></div>`).join("")}</div></div></section>
 <section class="about"><div class="wrap"><h2>How it works</h2><div class="steps four"><div><h3>Browse tutors</h3><p class="mut">Filter by subject, university and interests.</p></div><div><h3>Read a profile</h3><p class="mut">Meet the person behind the subject.</p></div><div><h3>Book a time</h3><p class="mut">See live availability and pick a slot.</p></div><div><h3>Pay and learn</h3><p class="mut">Pay by card after booking, then meet online.</p></div></div></div></section>
+<section><div class="wrap"><h2 class="center">What we help with</h2><p class="mut center">Senior-level courses, plus the things school doesn’t always teach.</p><div class="help">${C.help.map(([h, items]) => `<div><h3>${h}</h3><ul>${items.map((i) => `<li>${i}</li>`).join("")}</ul></div>`).join("")}</div></div></section>
 <section><div class="wrap"><h2>What students say</h2><div class="qg">${C.quotes.map((q) => `<div class="q"><blockquote>“${q[0]}”</blockquote><cite>${q[1]}</cite></div>`).join("")}</div></div></section>
-<section id="faq" class="about"><div class="wrap split"><h2>Questions, answered</h2><div>${C.faq.map((f) => `<details><summary>${f[0]}</summary><p>${f[1]}</p></details>`).join("")}</div></div></section>
+<section id="about" class="about"><div class="wrap split"><div><h2>Who we are</h2><div class="tags" style="margin-top:18px">${C.words.map((w) => `<span class="tag">${w}</span>`).join("")}</div></div><div>${C.overview.map((p) => `<p>${p}</p>`).join("")}<h3 style="margin-top:28px">Our mission</h3>${C.mission.map((p) => `<p>${p}</p>`).join("")}</div></div></section>
+<section id="faq"><div class="wrap split"><h2>Questions, answered</h2><div>${C.faq.map((f) => `<details><summary>${f[0]}</summary><p>${f[1]}</p></details>`).join("")}</div></div></section>
 <section class="cta" id="contact"><div class="wrap"><div><h2>Ready to grow?</h2><p>Find the tutor who feels right and book in minutes.</p><div class="row"><a class="btn white" href="#tutors">Find a tutor</a></div><p style="margin-top:24px">${C.email}<br>${C.phone}</p></div>
 <form id="cf" novalidate><label for="cn">Name</label><input id="cn"><label for="ce">Email</label><input id="ce" type="email"><label for="cm">Message</label><textarea id="cm" rows="4"></textarea><p class="err" id="cerr" role="alert"></p><button class="btn">Send message</button></form></div></section>`;
   fx();
