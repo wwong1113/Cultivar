@@ -1,4 +1,4 @@
 ## Cultivar
 
 
-Tutoring Website
+Tutoring Website designed for highschool students
