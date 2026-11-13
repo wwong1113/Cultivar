@@ -1,7 +1,7 @@
 :root {
   /* Crimson Noir: #02060E · #1A1A1D · #4E4E50 · #6F2232 · #950740 · #C50337 */
   --noir: #02060e;
-  --bg: #08090d;
+  --bg: #02060e;
   --surf: #111216;
   --surf2: #1a1a1d;
   --ink: #f3ecee;
@@ -205,9 +205,7 @@ header {
   position: sticky;
   top: env(safe-area-inset-top, 0px);
   z-index: 30;
-  background: rgba(8, 9, 13, 0.82);
-  backdrop-filter: saturate(140%) blur(14px);
-  -webkit-backdrop-filter: saturate(140%) blur(14px);
+  background: var(--bg);
   border-bottom: 1px solid var(--line);
 }
 
@@ -216,8 +214,7 @@ body::before {
   position: fixed;
   inset: 0 0 auto;
   height: env(safe-area-inset-top, 0px);
-  background: rgba(8, 9, 13, 0.82);
-  backdrop-filter: saturate(140%) blur(14px);
+  background: var(--bg);
   z-index: 31;
 }
 
@@ -1138,11 +1135,7 @@ footer .fnote {
 /* booking */
 .book {
   padding: 40px 0 96px;
-  background: radial-gradient(
-    900px 420px at 50% -120px,
-    rgba(197, 3, 55, 0.22),
-    transparent 70%
-  );
+  background: none;
 }
 
 .book h1 {
@@ -1710,6 +1703,7 @@ nav a.l:hover::after {
 
 .hero::before,
 .hero::after {
+  display: none;
   content: "";
   position: absolute;
   border-radius: 50%;
@@ -2269,8 +2263,9 @@ select option {
   isolation: isolate;
 }
 
-/* a low crimson horizon the hero sits on */
+/* (horizon glow retired: the background stays solid black) */
 .hero .wrap::before {
+  display: none;
   content: "";
   position: absolute;
   left: 50%;
@@ -2371,11 +2366,6 @@ table td small,
   position: relative;
 }
 
-.q .qm {
-  display: block;
-  fill: currentColor;
-}
-
 .q.lead {
   grid-column: 1 / -1;
   display: grid;
@@ -2387,6 +2377,7 @@ table td small,
 }
 
 .q.lead::before {
+  display: none;
   content: "";
   position: absolute;
   left: -160px;
@@ -2400,12 +2391,6 @@ table td small,
   );
   z-index: -1;
   pointer-events: none;
-}
-
-.q.lead .qm {
-  width: 72px;
-  margin-top: 8px;
-  color: var(--red);
 }
 
 .q.lead blockquote {
@@ -2429,12 +2414,6 @@ table td small,
 .q:not(.lead) + .q:not(.lead) {
   padding: 40px 0 8px 48px;
   border-left: 1px solid var(--line);
-}
-
-.q:not(.lead) .qm {
-  width: 28px;
-  margin-bottom: 18px;
-  color: var(--rose);
 }
 
 .q:not(.lead) blockquote {
@@ -2471,19 +2450,6 @@ table td small,
 }
 
 /* the quote mark lands as each testimonial scrolls in */
-html.js .q.rv .qm {
-  opacity: 0;
-  transform: translateY(10px) scale(0.7) rotate(-10deg);
-  transform-origin: left bottom;
-}
-
-html.js .q.rv.vis .qm {
-  opacity: 1;
-  transform: none;
-  transition:
-    opacity 0.6s var(--ease) calc(var(--d, 0ms) + 200ms),
-    transform 0.9s var(--ease) calc(var(--d, 0ms) + 200ms);
-}
 
 @media (max-width: 900px) {
   .qg {
@@ -2492,10 +2458,6 @@ html.js .q.rv.vis .qm {
   .q.lead {
     grid-template-columns: 1fr;
     padding: 40px 0;
-  }
-  .q.lead .qm {
-    width: 48px;
-    margin: 0 0 18px;
   }
   .q.lead figcaption {
     grid-column: auto;
@@ -2511,12 +2473,542 @@ html.js .q.rv.vis .qm {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html.js .q.rv .qm {
-    opacity: 1;
-    transform: none;
-  }
 }
 
 .voices {
   overflow: hidden;
+}
+
+/* ===== v7: two-column hero ===== */
+.hero {
+  padding: 72px 0 96px;
+}
+
+.hero .wrap {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  justify-items: stretch;
+  align-items: center;
+  text-align: left;
+  gap: 64px;
+}
+
+.hero .wrap > div:first-child {
+  align-items: flex-start;
+}
+
+.hero h1,
+.hero h1.long {
+  font-size: clamp(2.7rem, 5vw, 4.6rem);
+  max-width: 13ch;
+  margin-inline: 0;
+}
+
+.hero .sub,
+.hero .intro {
+  margin-inline: 0;
+}
+
+.hero .row,
+.hero .facts {
+  justify-content: flex-start;
+}
+
+.hero .intro {
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+
+.hero .wrap::before {
+  left: 30%;
+}
+
+/* universities: southern Ontario map + list */
+.hero {
+  padding: 100px 0 96px;
+  overflow: visible;
+  overflow-x: clip;
+  /* one deliberate crimson light source behind the map, fading to noir */
+  background:
+    linear-gradient(180deg, transparent 78%, var(--bg)),
+    radial-gradient(
+      62% 85% at 74% 52%,
+      rgba(197, 3, 55, 0.42),
+      rgba(149, 7, 64, 0.2) 42%,
+      rgba(111, 34, 50, 0.08) 62%,
+      transparent 80%
+    ),
+    radial-gradient(
+      45% 60% at 0% 100%,
+      rgba(149, 7, 64, 0.26),
+      transparent 70%
+    ),
+    linear-gradient(160deg, rgba(197, 3, 55, 0.1), transparent 45%);
+}
+
+.hero .wrap {
+  align-items: stretch;
+}
+
+/* left column spans the panel: headline top meets panel top, intro bottom meets panel bottom */
+.hcopy {
+  display: flex;
+  flex-direction: column;
+}
+
+.hero .hcopy h1 {
+  margin-top: -0.14em;
+}
+
+.hero .facts {
+  margin-bottom: 32px;
+}
+
+.hero .hcopy .intro {
+  margin: auto 0 -0.3em;
+}
+
+.uwrap {
+  position: relative;
+  display: flex;
+}
+
+.unis {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 46px 44px 40px;
+  border-radius: 28px;
+  border: 1px solid var(--line);
+  background: var(--surf);
+  box-shadow: var(--sh);
+  animation: rise 0.9s 0.35s var(--ease) both;
+}
+
+.uhd h2 {
+  font-size: 1.55rem;
+  margin: 0 0 4px;
+}
+
+.uhd p {
+  margin: 0;
+  color: var(--mut);
+  font-size: 0.95rem;
+}
+
+.umap {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  margin: 16px 0 14px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--noir);
+  border: 1px solid var(--line);
+}
+
+.umap svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.umap .nb {
+  fill: #16161a;
+  stroke: #2a2a30;
+  stroke-width: 0.8;
+}
+
+.umap .ont {
+  fill: #2a0d17;
+  stroke: #7a2638;
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+
+.umap .lake {
+  fill: #5d5960;
+  font:
+    italic 500 12px Onest,
+    sans-serif;
+  text-anchor: middle;
+}
+
+.umap .city {
+  fill: var(--ink);
+  font:
+    600 14px Onest,
+    sans-serif;
+  paint-order: stroke;
+  stroke: #2a0d17;
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.umap .city tspan {
+  fill: var(--rose);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pin .dot {
+  fill: var(--rose);
+  stroke: #2a0d17;
+  stroke-width: 2.4;
+  transition:
+    fill 0.2s,
+    transform 0.3s var(--ease);
+}
+
+.pin .ring {
+  fill: rgba(255, 106, 140, 0.35);
+  opacity: 0;
+}
+
+.pin .dot,
+.pin .ring {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.pin .dot {
+  animation: pinIn 0.6s var(--ease) both;
+  animation-delay: calc(var(--i) * 110ms + 0.8s);
+}
+
+.pin .city {
+  animation: fade 0.6s var(--ease) both;
+  animation-delay: calc(var(--i) * 110ms + 1s);
+}
+
+.pin .ring {
+  animation: pinPulse 2.8s ease-out infinite;
+  animation-delay: calc(var(--i) * 110ms + 1.2s);
+}
+
+@keyframes pinIn {
+  from {
+    transform: scale(0);
+  }
+  60% {
+    transform: scale(1.5);
+  }
+}
+
+@keyframes pinPulse {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.4);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+
+.pin.hot .dot {
+  fill: #fff;
+  transform: scale(1.5);
+}
+
+.pin.hot .city {
+  fill: #fff;
+}
+
+.ulist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 14px;
+}
+
+.ulist li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.25;
+  transition: background 0.2s;
+}
+
+.ulist li small {
+  display: block;
+  color: var(--mut);
+  font-size: 0.78rem;
+  font-weight: 400;
+}
+
+.ulist i {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--rose);
+  box-shadow: 0 0 0 3px rgba(197, 3, 55, 0.25);
+  transition:
+    background 0.2s,
+    transform 0.25s var(--ease);
+}
+
+.ulist li.hot {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ulist li.hot i {
+  background: #fff;
+  transform: scale(1.3);
+}
+
+@media (max-width: 900px) {
+  .hero {
+    padding: 48px 0 72px;
+  }
+  .hero .wrap {
+    grid-template-columns: 1fr;
+    gap: 76px;
+  }
+  .hero .hcopy h1 {
+    max-width: 14ch;
+  }
+  .hero .hcopy .intro {
+    margin: 0;
+  }
+  .unis {
+    padding: 32px 26px 26px;
+  }
+  .hero {
+    background:
+      linear-gradient(180deg, transparent 85%, var(--bg)),
+      radial-gradient(
+        90% 40% at 70% 72%,
+        rgba(197, 3, 55, 0.3),
+        rgba(111, 34, 50, 0.14) 50%,
+        transparent 78%
+      ),
+      linear-gradient(180deg, rgba(197, 3, 55, 0.08), transparent 30%);
+  }
+}
+
+@media (max-width: 460px) {
+  .ulist {
+    grid-template-columns: 1fr;
+  }
+  .umap .city {
+    font-size: 17px;
+  }
+  .umap .city tspan {
+    font-size: 15px;
+  }
+  .umap .lake {
+    font-size: 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .unis,
+  .pin .dot,
+  .pin .ring,
+  .pin .city,
+  .frame * {
+    animation: none !important;
+  }
+}
+
+/* ===== v8: blossom frame around the map panel ===== */
+.hero .wrap {
+  column-gap: 104px;
+}
+
+.frame {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.fr-shadow path {
+  fill: none;
+  stroke: #000;
+  stroke-opacity: 0.6;
+  stroke-linecap: round;
+}
+
+.fr-b,
+.fr-hl {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.fr-b {
+  stroke: url(#fr-bark);
+}
+
+.fr-b.fr-ol {
+  stroke: #141316;
+}
+
+.fr-hl {
+  stroke: #a39ea6;
+  stroke-opacity: 0.4;
+}
+
+.fr-pt {
+  fill: url(#fr-petal);
+  stroke: #e9c7d1;
+  stroke-width: 0.8;
+}
+
+.fr-ctr {
+  fill: #cf8399;
+}
+
+.fr-st line {
+  stroke: #8d4b5f;
+  stroke-width: 1.1;
+  stroke-linecap: round;
+}
+
+.fr-st circle {
+  fill: #7a2638;
+}
+
+.fr-bl {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: frBloom 1.1s var(--ease) var(--d) both;
+}
+
+@keyframes frBloom {
+  from {
+    transform: scale(0) rotate(-50deg);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.fr-sw {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: frSway var(--sw, 7s) ease-in-out 3.4s infinite alternate;
+}
+
+@keyframes frSway {
+  from {
+    transform: rotate(-3deg);
+  }
+  to {
+    transform: rotate(3deg);
+  }
+}
+
+/* rebuilt after a resize: blossoms stay open, no replay */
+.frame.settled .fr-bl {
+  animation: none;
+}
+
+@media (max-width: 900px) {
+  .hero .wrap {
+    column-gap: 0;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1180px) {
+  .hero .wrap {
+    column-gap: 80px;
+  }
+  .unis {
+    padding: 40px 32px 34px;
+  }
+  .ulist li {
+    font-size: 0.82rem;
+    padding: 5px 4px;
+  }
+}
+
+/* ===== v10: quotation marks on every testimonial ===== */
+.qo,
+.qc {
+  color: var(--rose);
+  font-family: Gabarito, Onest, sans-serif;
+}
+
+/* the opening mark hangs into the margin so the text block stays aligned */
+.qo {
+  display: inline-block;
+  margin-left: -0.5em;
+  width: 0.5em;
+}
+
+.qc {
+  margin-left: 0.04em;
+}
+
+.q.lead {
+  grid-template-columns: 1fr;
+  padding-left: 0.6em;
+}
+
+.q.lead figcaption {
+  grid-column: auto;
+}
+
+.q.lead blockquote {
+  max-width: 26ch;
+}
+
+.q:not(.lead) blockquote {
+  padding-left: 0.55em;
+}
+
+.q:not(.lead) figcaption {
+  margin-left: 0.55em;
+}
+
+/* the marks land as each testimonial scrolls in */
+html.js .q.rv .qo,
+html.js .q.rv .qc {
+  opacity: 0;
+  transform: translateY(0.25em) scale(0.6);
+}
+
+html.js .q.rv.vis .qo,
+html.js .q.rv.vis .qc {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.6s var(--ease) calc(var(--d, 0ms) + 200ms),
+    transform 0.9s var(--ease) calc(var(--d, 0ms) + 200ms);
+}
+
+html.js .q.rv.vis .qc {
+  transition-delay: calc(var(--d, 0ms) + 450ms);
+}
+
+.qc {
+  display: inline-block;
+}
+
+@media (max-width: 900px) {
+  .hero .wrap {
+    row-gap: 80px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.js .q.rv .qo,
+  html.js .q.rv .qc {
+    opacity: 1;
+    transform: none;
+  }
 }
