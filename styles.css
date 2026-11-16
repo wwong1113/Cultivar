@@ -2816,117 +2816,13 @@ table td small,
   .unis,
   .pin .dot,
   .pin .ring,
-  .pin .city,
-  .frame * {
+  .pin .city {
     animation: none !important;
   }
 }
 
-/* ===== v8: blossom frame around the map panel ===== */
-.hero .wrap {
-  column-gap: 104px;
-}
-
-.frame {
-  position: absolute;
-  z-index: 2;
-  pointer-events: none;
-  overflow: visible;
-}
-
-.fr-shadow path {
-  fill: none;
-  stroke: #000;
-  stroke-opacity: 0.6;
-  stroke-linecap: round;
-}
-
-.fr-b,
-.fr-hl {
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.fr-b {
-  stroke: url(#fr-bark);
-}
-
-.fr-b.fr-ol {
-  stroke: #141316;
-}
-
-.fr-hl {
-  stroke: #a39ea6;
-  stroke-opacity: 0.4;
-}
-
-.fr-pt {
-  fill: url(#fr-petal);
-  stroke: #e9c7d1;
-  stroke-width: 0.8;
-}
-
-.fr-ctr {
-  fill: #cf8399;
-}
-
-.fr-st line {
-  stroke: #8d4b5f;
-  stroke-width: 1.1;
-  stroke-linecap: round;
-}
-
-.fr-st circle {
-  fill: #7a2638;
-}
-
-.fr-bl {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: frBloom 1.1s var(--ease) var(--d) both;
-}
-
-@keyframes frBloom {
-  from {
-    transform: scale(0) rotate(-50deg);
-    opacity: 0;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.fr-sw {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: frSway var(--sw, 7s) ease-in-out 3.4s infinite alternate;
-}
-
-@keyframes frSway {
-  from {
-    transform: rotate(-3deg);
-  }
-  to {
-    transform: rotate(3deg);
-  }
-}
-
-/* rebuilt after a resize: blossoms stay open, no replay */
-.frame.settled .fr-bl {
-  animation: none;
-}
-
-@media (max-width: 900px) {
-  .hero .wrap {
-    column-gap: 0;
-  }
-}
 
 @media (min-width: 901px) and (max-width: 1180px) {
-  .hero .wrap {
-    column-gap: 80px;
-  }
   .unis {
     padding: 40px 32px 34px;
   }
@@ -3171,5 +3067,130 @@ html.js .q.rv.vis .qc {
   .logos .ulogo {
     animation: none;
     transform: none !important;
+  }
+}
+
+/* ===== v12: themed panel border (replaces the blossom frame) =====
+   A 1px crimson hairline drawn from the site's --glow palette: brightest where light
+   would catch the top-left corner, cooling to neutral, warming again at the far corner.
+   A soft crimson bloom underneath lifts the panel off the hero without decoration. */
+.unis {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--surf), var(--surf)) padding-box,
+    linear-gradient(
+        150deg,
+        rgba(224, 23, 77, 0.85) 0%,
+        rgba(149, 7, 64, 0.55) 22%,
+        rgba(78, 78, 80, 0.45) 50%,
+        rgba(111, 34, 50, 0.5) 78%,
+        rgba(197, 3, 55, 0.7) 100%
+      )
+      border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 24px 60px -20px rgba(0, 0, 0, 0.7),
+    0 30px 90px -40px rgba(197, 3, 55, 0.45);
+}
+
+@media (prefers-contrast: more) {
+  .unis {
+    background: var(--surf);
+    border-color: var(--red);
+  }
+}
+
+/* ===== v13: profile pictures are always true circles ===== */
+.av,
+.tc:hover .av {
+  border-radius: 50%;
+  aspect-ratio: 1;
+  flex-shrink: 0;
+}
+
+.av.ph {
+  object-fit: cover;
+  object-position: center;
+}
+
+/* ===== v14: hero fits the first screen =====
+   On desktop the whole universities panel is visible without scrolling. Spacing,
+   headline size and logo rows scale with the window height (svh), capped at the
+   previous sizes on tall screens. The intro's last line still sits on the panel's
+   bottom edge because both columns stretch to the same row height. */
+@media (min-width: 901px) {
+  .hero {
+    padding-top: clamp(28px, 6svh, 100px);
+  }
+  .hero .hcopy h1 {
+    font-size: clamp(2.6rem, min(5vw, 8.2svh), 4.6rem);
+  }
+  .unis {
+    padding: clamp(28px, 4.4svh, 46px) 40px clamp(26px, 4svh, 40px);
+  }
+  .logos {
+    margin-top: clamp(14px, 2.4svh, 22px);
+    grid-auto-rows: minmax(clamp(60px, calc((100svh - 370px) / 5), 96px), 1fr);
+  }
+}
+
+/* ===== v15: lighter hero copy + the price / format note =====
+   The headline keeps its four-line rhythm ("where you are." alone on the last line)
+   but drops a size step; the subline drops to body-plus so the buttons and the note
+   carry the eye instead of a block of text. */
+.hero .sub {
+  font-size: 1.1875rem;
+  line-height: 1.55;
+  max-width: 36ch;
+}
+
+.hero .hnote {
+  margin: 22px 0 0;
+  font:
+    500 1.0625rem/1.5 Onest,
+    system-ui,
+    sans-serif;
+  color: var(--mut);
+  text-wrap: balance;
+}
+
+/* each item keeps its trailing dot, so a wrap never strands a separator at a line start */
+.hero .hnote .hn-item {
+  white-space: nowrap;
+}
+
+.hero .hnote .sep {
+  color: var(--red);
+  font-weight: 700;
+  margin-left: 0.4em;
+}
+
+@media (max-width: 900px) {
+  .hero .hcopy .intro {
+    margin-top: 28px;
+  }
+}
+
+@media (min-width: 901px) {
+  .hero .hcopy h1 {
+    font-size: clamp(2.6rem, min(4.9vw, 8.2svh), 4.4rem);
+  }
+}
+
+/* ===== v16: less air above the hero =====
+   The gap between the nav and the headline drops by about half; the logo rows
+   take back the height that frees up, so the panel still ends on the first screen. */
+@media (min-width: 901px) {
+  .hero {
+    padding-top: clamp(14px, 2.6svh, 44px);
+  }
+  .logos {
+    grid-auto-rows: minmax(clamp(60px, calc((100svh - 345px) / 5), 100px), 1fr);
+  }
+}
+@media (max-width: 900px) {
+  .hero {
+    padding-top: 26px;
   }
 }

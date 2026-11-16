@@ -160,12 +160,9 @@ async function uploadTutorPhoto(file, userId) {
 // ===== CONTENT =====
 const C = {
   tagline: "Learn from someone who’s been where you are.",
-  sub: "Personalized Grade 9–12 tutoring from university students who understand the courses, the pressure, and what comes next.",
-  facts: [
-    "Grades 9–12",
-    "Personalized 1-on-1 support",
-    "University student tutors",
-  ],
+  sub: "Personalized Grade 9–12 tutoring from university students who understand the courses.",
+  // one-line summary under the hero buttons; the first item is emphasized
+  note: ["$40/hour", "1-on-1 tutoring", "University student tutors"],
   // Hero "Where our tutors study" logo wall: [name, city, logo file slug].
   // Logos load from assets/unis/mono/<slug>.png (single-tone, built from the colour
   // file in assets/unis/<slug>.png by scripts/build-uni-logos.py); the colour file
@@ -280,6 +277,139 @@ const C = {
   email: "cultivarplus@gmail.com",
   phone: "(000) 000-0000",
 };
+// ===== UNIVERSITY + PROGRAM NAMES =====
+// Tutors pick from these (or type their own). Shorthand and alternate spellings snap to
+// the official name, so "UofT", "u of t" and "university of toronto" all become
+// "University of Toronto" and the Tutors-page filter never shows duplicates.
+// Format: [official name, ...aliases]. Matching ignores case, punctuation and "the".
+const UNIS = [
+  ["University of Toronto", "uoft", "u of t", "utoronto", "toronto", "uoft st george", "utsg", "uoft mississauga", "utm", "uoft scarborough", "utsc"],
+  ["Western University", "western", "uwo", "university of western ontario", "western ontario"],
+  ["University of Waterloo", "waterloo", "uwaterloo", "uw", "u waterloo"],
+  ["Wilfrid Laurier University", "laurier", "wlu", "wilfrid laurier"],
+  ["McMaster University", "mcmaster", "mac", "mcmaster u"],
+  ["Queen’s University", "queens", "queens u", "queensu", "queens university at kingston"],
+  ["University of Ottawa", "uottawa", "u of o", "uo", "ottawa u", "universite d ottawa"],
+  ["Carleton University", "carleton", "carleton u"],
+  ["York University", "york", "yorku", "york u"],
+  ["Toronto Metropolitan University", "tmu", "ryerson", "ryerson university", "toronto metropolitan", "torontomu"],
+  ["University of Guelph", "guelph", "uofg", "u of g", "uoguelph"],
+  ["Brock University", "brock", "brocku"],
+  ["Ontario Tech University", "ontario tech", "uoit", "university of ontario institute of technology"],
+  ["Trent University", "trent"],
+  ["University of Windsor", "windsor", "uwindsor"],
+  ["Lakehead University", "lakehead"],
+  ["Laurentian University", "laurentian"],
+  ["Nipissing University", "nipissing"],
+  ["OCAD University", "ocad", "ocadu", "ocad u"],
+  ["University of British Columbia", "ubc"],
+  ["Simon Fraser University", "sfu", "simon fraser"],
+  ["University of Victoria", "uvic", "victoria"],
+  ["University of Alberta", "ualberta", "u of a", "uofa", "alberta"],
+  ["University of Calgary", "ucalgary", "u of c", "uofc", "calgary"],
+  ["University of Saskatchewan", "usask", "u of s", "saskatchewan"],
+  ["University of Manitoba", "umanitoba", "u of m", "manitoba"],
+  ["McGill University", "mcgill"],
+  ["Concordia University", "concordia"],
+  ["Université de Montréal", "udem", "universite de montreal", "university of montreal"],
+  ["Dalhousie University", "dalhousie", "dal"],
+  ["Memorial University of Newfoundland", "memorial", "mun", "memorial university"],
+];
+const PROGRAMS = [
+  ["Computer Science", "cs", "comp sci", "compsci", "comp-sci", "computing science"],
+  ["Software Engineering", "se", "softeng", "software eng"],
+  ["Electrical and Computer Engineering", "ece", "electrical computer engineering"],
+  ["Electrical Engineering", "ee", "electrical eng", "elec eng"],
+  ["Computer Engineering", "ce", "comp eng", "computer eng"],
+  ["Mechanical Engineering", "mech", "mech eng", "mechanical eng"],
+  ["Civil Engineering", "civ", "civil eng"],
+  ["Chemical Engineering", "chem eng", "chemical eng"],
+  ["Biomedical Engineering", "bme", "biomed eng"],
+  ["Engineering Science", "engsci", "eng sci"],
+  ["Engineering", "eng", "engg", "general engineering"],
+  ["Mechatronics Engineering", "tron", "mechatronics"],
+  ["Life Sciences", "lifesci", "life sci"],
+  ["Health Sciences", "health sci", "healthsci", "hsci", "health science"],
+  ["Medical Sciences", "medsci", "med sci", "medical science"],
+  ["Kinesiology", "kin", "kines"],
+  ["Nursing", "bscn"],
+  ["Biology", "bio"],
+  ["Biochemistry", "biochem"],
+  ["Chemistry", "chem"],
+  ["Physics", "phys"],
+  ["Mathematics", "math", "maths"],
+  ["Statistics", "stats", "stat"],
+  ["Actuarial Science", "actsci", "act sci", "actuarial"],
+  ["Data Science", "data sci"],
+  ["Business Administration", "bba", "business", "business admin", "hba", "ivey", "ivey hba"],
+  ["Commerce", "comm", "bcom", "commerce"],
+  ["Accounting", "acc", "accounting and financial management", "afm"],
+  ["Finance", "fin"],
+  ["Economics", "econ", "econs"],
+  ["Psychology", "psych", "psyc", "psy"],
+  ["Neuroscience", "neuro"],
+  ["Political Science", "poli sci", "polisci", "poli", "politics"],
+  ["Sociology", "soc"],
+  ["Criminology", "crim"],
+  ["English", "english literature", "eng lit"],
+  ["History", "hist"],
+  ["Philosophy", "phil"],
+  ["Linguistics", "ling"],
+  ["Education", "concurrent education", "con ed", "coned", "teaching"],
+  ["Environmental Science", "envsci", "env sci", "enviro sci"],
+  ["Architecture", "arch"],
+  ["Pharmacy", "pharm"],
+  ["Arts and Science", "arts sci", "artsci", "arts & science"],
+];
+const YEARS = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5+", "Graduate"];
+const nameKey = (s) =>
+  String(s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // é → e
+    .replace(/&/g, " and ")
+    .replace(/[’'`.]/g, "") // queen's → queens, u.of.t → uoft
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/^the /, "")
+    .trim();
+const aliasMap = (list) => {
+  const m = new Map();
+  list.forEach(([name, ...aka]) =>
+    [name, ...aka].forEach((a) => {
+      m.set(nameKey(a), name);
+      m.set(nameKey(a).replace(/ /g, ""), name); // "u of t" also matches "uoft"
+    }),
+  );
+  return m;
+};
+const UNI_BY = aliasMap(UNIS),
+  PROG_BY = aliasMap(PROGRAMS);
+// Official name when we recognize it; otherwise the person's own text, tidied.
+const canonName = (by) => (s) => {
+  const raw = String(s || "").replace(/\s+/g, " ").trim(),
+    k = nameKey(raw);
+  return by.get(k) || by.get(k.replace(/ /g, "")) || raw;
+};
+const canonUni = canonName(UNI_BY),
+  canonProg = canonName(PROG_BY);
+// "Life Sciences, Year 2" ⇄ ["Life Sciences", "Year 2"]; older free-text years too
+const splitProgram = (s) => {
+  const m = String(s || "").match(
+    /^(.*?)[,·\-–\s]+(?:(year|yr)\s*(\d)\+?|(\d)(?:st|nd|rd|th)\s*year|(grad(?:uate)?|masters?|phd|msc|ma))\s*$/i,
+  );
+  if (!m) return [String(s || "").trim(), ""];
+  const n = +(m[3] || m[4] || 0);
+  return [m[1].trim(), m[5] ? "Graduate" : n >= 5 ? "Year 5+" : n ? "Year " + n : ""];
+};
+const joinProgram = (prog, yr) =>
+  [canonProg(prog), yr].filter(Boolean).join(", ");
+const canonProgram = (s) => joinProgram(...splitProgram(s));
+// Snap a typed name to the official one as soon as the field loses focus.
+document.addEventListener("focusout", (e) => {
+  const el = e.target;
+  if (el.id === "un") el.value = canonUni(el.value);
+  if (el.id === "pr") el.value = canonProg(el.value);
+});
 // ===== DATA LAYER =====
 // Everything lives in Supabase. The rest of the app still reads through the small
 // synchronous helpers below (U, B, S, me, allTutors...), which are backed by this
@@ -337,8 +467,8 @@ const mapProfile = (p) => ({
   name: p.name,
   email: p.email || "",
   grade: p.grade,
-  uni: p.uni || "",
-  program: p.program || "",
+  uni: canonUni(p.uni),
+  program: canonProgram(p.program),
   // "English / Writing" was renamed to "English"; older profiles still store the old name
   subjects: (p.subjects || []).map((s) =>
     s === "English / Writing" ? "English" : s,
@@ -658,204 +788,12 @@ const uniMap = () => {
   const pins = Object.entries(MAP.cities).filter(([c]) => by[c]);
   return `<figure class="umap"><svg viewBox="0 0 ${MAP.w} ${MAP.h}" role="img" aria-labelledby="umt"><title id="umt">Map of southern Ontario marking ${C.unis.length} universities where Cultivar+ tutors study</title>${MAP.nb.map((d) => `<path class="nb" d="${d}"/>`).join("")}<path class="ont" d="${MAP.on}"/>${MAP.lakes.map(([n, [x, y]]) => `<text class="lake" x="${x}" y="${y}">${n}</text>`).join("")}<g class="pins">${pins.map(([c, [x, y]], i) => `<g class="pin" data-c="${c}" style="--i:${i}" transform="translate(${x} ${y})"><circle class="ring" r="15"/><circle class="dot" r="6.5"/><text class="city" x="12" y="5">${c}${by[c].length > 1 ? `<tspan dx="5">${by[c].length}</tspan>` : ""}</text><title>${c}: ${by[c].join(", ")}</title></g>`).join("")}</g></svg></figure>`;
 };
-// Blossom frame: intertwined bark branches wrapped around the map panel's edge, with
-// pale blossoms at the corners and along the sides. Built from the panel's measured
-// size so it fits any width; rebuilt on resize without replaying the growth.
-let frameGrown = false,
-  frameRO = null;
-function blossomFrame() {
-  const box = $(".uwrap"),
-    panel = box && box.querySelector(".unis");
-  if (!panel) return;
-  const w = panel.offsetWidth,
-    h = panel.offsetHeight;
-  if (!w || !h) return;
-  const small = w < 480,
-    M = small ? 44 : 70,
-    W = w + 2 * M,
-    H = h + 2 * M,
-    R = 28,
-    sc = small ? 0.62 : 1;
-  let seed = 7; // seeded, so every rebuild draws the same frame
-  const rnd = () => {
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-  // point + outward normal at distance s, clockwise around the panel's rounded rect
-  const x0 = M,
-    y0 = M,
-    sw = w - 2 * R,
-    sh = h - 2 * R,
-    arc = (Math.PI * R) / 2;
-  const P = 2 * sw + 2 * sh + 4 * arc;
-  const corner = (cx, cy, a0) => (u) => {
-    const a = a0 + u / R;
-    return [
-      cx + R * Math.cos(a),
-      cy + R * Math.sin(a),
-      Math.cos(a),
-      Math.sin(a),
-    ];
-  };
-  const segs = [
-    [sw, (u) => [x0 + R + u, y0, 0, -1]],
-    [arc, corner(x0 + w - R, y0 + R, -Math.PI / 2)],
-    [sh, (u) => [x0 + w, y0 + R + u, 1, 0]],
-    [arc, corner(x0 + w - R, y0 + h - R, 0)],
-    [sw, (u) => [x0 + w - R - u, y0 + h, 0, 1]],
-    [arc, corner(x0 + R, y0 + h - R, Math.PI / 2)],
-    [sh, (u) => [x0, y0 + h - R - u, -1, 0]],
-    [arc, corner(x0 + R, y0 + R, Math.PI)],
-  ];
-  const at = (s) => {
-    s = ((s % P) + P) % P;
-    for (const [len, f] of segs) {
-      if (s <= len) return f(s);
-      s -= len;
-    }
-    return segs[0][1](0);
-  };
-  // distance along the perimeter to the start of each side
-  const sTop = 0,
-    sRight = sw + arc,
-    sBottom = sw + 2 * arc + sh,
-    sLeft = 2 * sw + 3 * arc + sh;
-  const f1 = (n) => n.toFixed(1);
-  const smooth = (pts, closed) => {
-    const n = pts.length,
-      g = (i) => pts[closed ? (i + n) % n : Math.max(0, Math.min(n - 1, i))];
-    let d = `M${f1(pts[0][0])} ${f1(pts[0][1])}`;
-    for (let i = 0; i < (closed ? n : n - 1); i++) {
-      const a = g(i - 1),
-        b = g(i),
-        c = g(i + 1),
-        e = g(i + 2);
-      d += `C${f1(b[0] + (c[0] - a[0]) / 6)} ${f1(b[1] + (c[1] - a[1]) / 6)} ${f1(c[0] - (e[0] - b[0]) / 6)} ${f1(c[1] - (e[1] - b[1]) / 6)} ${f1(c[0])} ${f1(c[1])}`;
-    }
-    return d + (closed ? "Z" : "");
-  };
-  // a branch wanders in and out across the panel's edge
-  const branch = (start, span, base, amp, cycles, ph) => {
-    const closed = span >= 1,
-      n = Math.max(8, Math.round((span * P) / 16)),
-      pts = [];
-    for (let k = 0; k < (closed ? n : n + 1); k++) {
-      const s = start * P + (k / n) * span * P,
-        [x, y, nx, ny] = at(s),
-        o =
-          (base + amp * Math.sin((2 * Math.PI * cycles * s) / P + ph)) * sc +
-          (rnd() - 0.5) * 2;
-      pts.push([x + nx * o, y + ny * o]);
-    }
-    return smooth(pts, closed);
-  };
-  const branches = [
-    // start, span, offset, amplitude, cycles, phase, width
-    [0.02, 1, 4, 13, Math.max(3, Math.round(P / 300)), 0, 34],
-    [0.52, 1, 2, 17, Math.max(4, Math.round(P / 210)), 1.7, 24],
-    [0.27, 1, 10, 10, Math.max(3, Math.round(P / 360)) + 1, 3.1, 14],
-    [0.14, 0.4, 16, 16, 3, 0.6, 10],
-    [0.64, 0.38, -2, 18, 3, 2.2, 9],
-  ].map(([st, sp, b, a, c, ph, wd]) => [branch(st, sp, b, a, c, ph), wd * sc]);
-  // blossoms: corners pushed outward so the petals stay clear of the content
-  const spots = [];
-  const o = small ? 12 : 22;
-  // ord = position clockwise around the frame (0–10), so blossoms open in a sweep
-  const ordAt = (s) => (10 * (((s % P) + P) % P)) / P;
-  spots.push(
-    [x0 - o, y0 - o, 1.35, 0],
-    [x0 + w + o, y0 - o * 0.4, 1.18, ordAt(sw + arc / 2)],
-    [x0 + w + o * 0.7, y0 + h + o, 1.4, ordAt(sRight + sh + arc / 2)],
-    [x0 - o, y0 + h + o * 0.6, 1.25, ordAt(sBottom + sw + arc / 2)],
-  );
-  const side = (s, out, k) => {
-    const [x, y, nx, ny] = at(s);
-    spots.push([x + nx * out * sc, y + ny * out * sc, k, ordAt(s)]);
-  };
-  // fill every side evenly between the corner blossoms, with a little natural jitter
-  const gap = small ? 92 : 124;
-  [
-    [sTop, sw],
-    [sRight, sh],
-    [sBottom, sw],
-    [sLeft, sh],
-  ].forEach(([s0, len], si) => {
-    const n = Math.max(1, Math.round(len / gap) - 1),
-      step = len / (n + 1);
-    for (let q = 1; q <= n; q++) {
-      const jitter = (rnd() - 0.5) * step * 0.3,
-        out = (q + si) % 2 ? 26 : 18,
-        k = 0.76 + rnd() * 0.24;
-      side(s0 + q * step + jitter, out, k);
-    }
-  });
-  const petal =
-    "M0 -2C-20 -8 -31 -30 -19 -46C-12 -55 -4 -53 0 -47C4 -53 12 -55 19 -46C31 -30 20 -8 0 -2Z";
-  const blossom = ([x, y, k, ord]) => {
-    const r = Math.round(rnd() * 72),
-      d = (0.5 + ord * 0.16).toFixed(2);
-    const stamens = [...Array(7)]
-      .map((_, q) => {
-        const a = ((q / 7) * 360 + rnd() * 20) * (Math.PI / 180),
-          L = 13 + rnd() * 6;
-        return `<line x1="0" y1="0" x2="${f1(Math.cos(a) * L)}" y2="${f1(Math.sin(a) * L)}"/><circle cx="${f1(Math.cos(a) * L)}" cy="${f1(Math.sin(a) * L)}" r="1.6"/>`;
-      })
-      .join("");
-    return `<g transform="translate(${f1(x)} ${f1(y)})"><g class="fr-bl" style="--d:${d}s"><g class="fr-sw" style="--sw:${(6 + rnd() * 4).toFixed(1)}s"><g transform="rotate(${r}) scale(${(k * sc).toFixed(2)})"><g filter="url(#fr-wc)">${[0, 72, 144, 216, 288].map((a) => `<path class="fr-pt" transform="rotate(${a})" d="${petal}"/>`).join("")}</g><circle class="fr-ctr" r="7"/><g class="fr-st">${stamens}</g></g></g></g></g>`;
-  };
-  // draw order: shadow, branches, blossoms west of the content first
-  const svg = `<svg class="frame${frameGrown ? " settled" : ""}" viewBox="0 0 ${W} ${H}" style="left:${-M}px;top:${-M}px;width:${W}px;height:${H}px" aria-hidden="true">
-<defs>
-<linearGradient id="fr-bark" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${W}" y2="${H}"><stop offset="0" stop-color="#55515a"/><stop offset=".4" stop-color="#7a757e"/><stop offset=".7" stop-color="#47444b"/><stop offset="1" stop-color="#66626a"/></linearGradient>
-<radialGradient id="fr-petal" cx=".5" cy="1" r="1"><stop offset="0" stop-color="#d996aa"/><stop offset=".35" stop-color="#efc6d2"/><stop offset=".75" stop-color="#fbe7ed"/><stop offset="1" stop-color="#fff5f8"/></radialGradient>
-<filter id="fr-barkf" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.018 0.05" numOctaves="2" seed="4" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="${small ? 5 : 10}" xChannelSelector="R" yChannelSelector="G" result="d"/><feTurbulence type="fractalNoise" baseFrequency="0.09 0.05" numOctaves="4" seed="12" result="bump"/><feDiffuseLighting in="bump" surfaceScale="2.6" lighting-color="#e6e0e8" result="lit"><feDistantLight azimuth="225" elevation="48"/></feDiffuseLighting><feComposite in="lit" in2="d" operator="arithmetic" k1="1.25" k2="0" k3="0" k4="0"/></filter>
-<filter id="fr-wc" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="2" seed="3" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G"/></filter>
-<filter id="fr-sh" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="${small ? 4 : 7}"/></filter>
-</defs>
-<g class="fr-shadow" filter="url(#fr-sh)">${branches
-    .slice(0, 3)
-    .map(
-      ([d, wd]) =>
-        `<path d="${d}" stroke-width="${f1(wd + 14)}" transform="translate(0 8)"/>`,
-    )
-    .join("")}</g>
-<g class="fr-branches" filter="url(#fr-barkf)">${branches.map(([d, wd], i) => `<path class="fr-b fr-ol" style="--i:${i}" d="${d}" stroke-width="${f1(wd + 5)}"/><path class="fr-b" style="--i:${i}" d="${d}" stroke-width="${f1(wd)}"/>`).join("")}${branches
-    .slice(0, 2)
-    .map(
-      ([d, wd], i) =>
-        `<path class="fr-hl" style="--i:${i}" d="${d}" stroke-width="${f1(Math.max(1.5, wd * 0.14))}" transform="translate(-1.5 -${f1(wd * 0.22)})"/>`,
-    )
-    .join("")}</g>
-<g class="fr-blossoms">${spots.map(blossom).join("")}</g></svg>`;
-  box.querySelector(".frame")?.remove();
-  box.insertAdjacentHTML("beforeend", svg);
-  frameGrown = true;
-  if (!frameRO) {
-    let last = w + "x" + h,
-      t;
-    frameRO = new ResizeObserver(() => {
-      clearTimeout(t);
-      t = setTimeout(() => {
-        const p = $(".uwrap .unis");
-        if (!p) return;
-        const now = p.offsetWidth + "x" + p.offsetHeight;
-        if (now !== last) {
-          last = now;
-          blossomFrame();
-        }
-      }, 120);
-    });
-  }
-  frameRO.disconnect();
-  frameRO.observe(panel);
-}
 // Size each logo by its shape so wide wordmarks and stacked logos carry similar weight
 // (equal visual area), then keep a clear margin inside the tile on every side.
 function logoFit(img) {
   const li = img.closest("li");
   if (!li || !img.naturalWidth) return;
+  logoRO.observe(li.parentNode);
   const r = img.naturalWidth / img.naturalHeight,
     small = window.matchMedia("(max-width: 460px)").matches,
     area = small ? 3600 : 5200,
@@ -864,8 +802,10 @@ function logoFit(img) {
     h = Math.min(small ? 48 : 58, Math.sqrt(area / r), maxW / r, maxH);
   img.parentNode.style.height = h.toFixed(1) + "px";
 }
+// refit whenever the grid itself changes size (window resize, web fonts loading in
+// and changing the hero's height, etc.), not just on window resize
 let logoRefit;
-window.addEventListener("resize", () => {
+const logoRO = new ResizeObserver(() => {
   cancelAnimationFrame(logoRefit);
   logoRefit = requestAnimationFrame(() =>
     document.querySelectorAll(".logos .m").forEach(logoFit),
@@ -1106,7 +1046,7 @@ function home() {
     .map((w, i) => `<span class="w" style="--i:${i}">${w}</span>`)
     .join(
       " ",
-    )}</h1><p class="sub">${C.sub}</p><div class="row"><a class="btn" href="#tutors">Meet our tutors</a><a class="btn alt" href="#book" data-track="book">Book a Session</a></div><ul class="facts">${C.facts.map((f) => `<li>${f}</li>`).join("")}</ul><p class="intro">${C.intro}</p></div><div class="uwrap"><aside class="unis" aria-labelledby="uh"><div class="uhd"><h2 id="uh">Where our tutors study</h2><p>Across Ontario, from London to Ottawa.</p></div><ul class="logos" aria-label="Universities">${C.unis.map(([n, c, sl], i) => `<li style="--i:${i}" title="${n}, ${c}"><span class="ulogo"><img class="m" src="assets/unis/mono/${sl}.png" alt="${n}" decoding="async" onload="logoFit(this)" onerror="this.closest('li').classList.add('nologo');this.parentNode.remove()"><img class="c" src="assets/unis/${sl}.png" alt="" aria-hidden="true" decoding="async" loading="lazy"></span><span class="ln">${n}<small>${c}</small></span></li>`).join("")}</ul></aside></div></div></section>
+    )}</h1><p class="sub">${C.sub}</p><div class="row"><a class="btn" href="#tutors">Meet our tutors</a><a class="btn alt" href="#book" data-track="book">Book a Session</a></div><p class="hnote">${C.note.map((n, i, a) => `<span class="hn-item${i ? "" : " hn-price"}">${n}${i < a.length - 1 ? `<span class="sep" aria-hidden="true">·</span>` : ""}</span>`).join(" ")}</p><p class="intro">${C.intro}</p></div><div class="uwrap"><aside class="unis" aria-labelledby="uh"><div class="uhd"><h2 id="uh">Where our tutors study</h2><p>Across Ontario, from London to Ottawa.</p></div><ul class="logos" aria-label="Universities">${C.unis.map(([n, c, sl], i) => `<li style="--i:${i}" title="${n}, ${c}"><span class="ulogo"><img class="m" src="assets/unis/mono/${sl}.png" alt="${n}" decoding="async" onload="logoFit(this)" onerror="this.closest('li').classList.add('nologo');this.parentNode.remove()"><img class="c" src="assets/unis/${sl}.png" alt="" aria-hidden="true" decoding="async" loading="lazy"></span><span class="ln">${n}<small>${c}</small></span></li>`).join("")}</ul></aside></div></div></section>
 <section id="tutors-sec"><div class="wrap"><h2 class="center">Choose a mentor, not just a tutor</h2><p class="mut center">Pick by subject, university, program or personality. Every tutor is a real university student.</p><div class="tg" style="margin-top:36px">${T.length ? T.slice(0, 6).map(tcard).join("") : '<p class="mut center">New tutors are joining soon.</p>'}</div><p class="center" style="margin-top:32px"><a class="btn alt" href="#tutors">Browse all tutors</a></p></div></section>
 <section class="about"><div class="wrap"><h2>How it works</h2><div class="steps four"><div><h3>Browse tutors</h3><p class="mut">Filter by subject, university and interests.</p></div><div><h3>Read a profile</h3><p class="mut">Meet the person behind the subject.</p></div><div><h3>Book a time</h3><p class="mut">See live availability and pick a slot.</p></div><div><h3>Pay and learn</h3><p class="mut">Pay by card after booking, then meet online.</p></div></div></div></section>
 <section><div class="wrap"><h2 class="center">What we help with</h2><p class="mut center">Senior-level courses, plus the things school doesn’t always teach.</p><div class="help">${C.help.map(([h, items]) => `<div><h3>${h}</h3><ul>${items.map((i) => `<li>${i}</li>`).join("")}</ul></div>`).join("")}</div></div></section>
@@ -1122,8 +1062,6 @@ function home() {
 <form id="cf" novalidate><label for="cn">Name</label><input id="cn"><label for="ce">Email</label><input id="ce" type="email"><label for="cm">Message</label><textarea id="cm" rows="4"></textarea><p class="err" id="cerr" role="alert"></p><button class="btn">Send message</button></form></div></section>`;
   fx();
   uniHover();
-  frameGrown = false;
-  blossomFrame();
   $("#cf").onsubmit = async (e) => {
     e.preventDefault();
     if (
@@ -1261,15 +1199,21 @@ function login() {
   };
 }
 const tutorFields = (t) =>
-  `<label for="un">University</label><input id="un" value="${esc(t.uni)}" placeholder="e.g. University of Toronto"><label for="pr">Program and year</label><input id="pr" value="${esc(t.program)}" placeholder="e.g. Life Sciences, Year 2"><fieldset class="fs"><legend>Subjects you tutor</legend>${C.subjects.map((s) => `<label class="chk"><input type="checkbox" name="sj" value="${s}" ${t.subjects?.includes(s) ? "checked" : ""}><span>${s}</span></label>`).join("")}</fieldset><label for="vb">Personality and interests (comma separated)</label><input id="vb" value="${esc((t.vibe || []).join(", "))}" placeholder="Patient, chess club, loves coffee"><label for="bi">Short bio</label><textarea id="bi" rows="4" maxlength="400">${esc(t.bio)}</textarea><label for="ph">Profile photo</label><input id="ph" type="file" accept="image/*"><label for="pl">Your Stripe Payment Link (optional)</label><input id="pl" value="${esc(t.payLink || "")}" placeholder="https://buy.stripe.com/...">`;
+  (([prog, yr]) =>
+    `<label for="un">University</label><input id="un" list="dl-uni" autocomplete="off" value="${esc(t.uni)}" placeholder="Start typing, e.g. UofT or Western"><datalist id="dl-uni">${UNIS.map(([n]) => `<option value="${esc(n)}">`).join("")}</datalist><div class="two"><div><label for="pr">Program</label><input id="pr" list="dl-prog" autocomplete="off" value="${esc(prog)}" placeholder="e.g. Life Sciences"><datalist id="dl-prog">${PROGRAMS.map(([n]) => `<option value="${esc(n)}">`).join("")}</datalist></div><div><label for="yr">Year</label><select id="yr"><option value="">Select…</option>${YEARS.map((y) => `<option ${y === yr ? "selected" : ""}>${y}</option>`).join("")}</select></div></div>`)(
+    splitProgram(t.program),
+  ) +
+  `<fieldset class="fs"><legend>Subjects you tutor</legend>${C.subjects.map((s) => `<label class="chk"><input type="checkbox" name="sj" value="${s}" ${t.subjects?.includes(s) ? "checked" : ""}><span>${s}</span></label>`).join("")}</fieldset><label for="vb">Personality and interests (comma separated)</label><input id="vb" value="${esc((t.vibe || []).join(", "))}" placeholder="Patient, chess club, loves coffee"><label for="bi">Short bio</label><textarea id="bi" rows="4" maxlength="400">${esc(t.bio)}</textarea><label for="ph">Profile photo</label><input id="ph" type="file" accept="image/*"><label for="pl">Your Stripe Payment Link (optional)</label><input id="pl" value="${esc(t.payLink || "")}" placeholder="https://buy.stripe.com/...">`;
 
 function readTutor(existingPhoto = "") {
   const sj = [...document.querySelectorAll("[name=sj]:checked")].map(
     (x) => x.value,
   );
   return {
-    uni: $("#un").value.trim(),
-    program: $("#pr").value.trim(),
+    uni: canonUni($("#un").value),
+    program: $("#pr").value.trim()
+      ? joinProgram($("#pr").value, $("#yr").value)
+      : "",
     subjects: sj,
     vibe: $("#vb")
       .value.split(",")
@@ -2076,7 +2020,7 @@ function admin() {
               !confirm(
                 "Remove " +
                   x.name +
-                  "? Their upcoming sessions will be cancelled.",
+                  "? This permanently deletes their account and all of their bookings, past and upcoming. This can't be undone.",
               )
             )
               return;

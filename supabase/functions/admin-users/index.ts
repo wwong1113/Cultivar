@@ -207,12 +207,13 @@ Deno.serve(async (req) => {
 
     // ------------------------------------------------------------ delete
     if (b.action === "delete") {
-      await admin
+      // Bookings point at the user without cascading, so they must go first or the
+      // account delete fails. Payment records still live in Stripe.
+      const { error: bErr } = await admin
         .from("bookings")
-        .update({ status: "cancelled" })
-        .or(`student_id.eq.${id},tutor_id.eq.${id}`)
-        .eq("status", "confirmed")
-        .gt("end_at", new Date().toISOString());
+        .delete()
+        .or(`student_id.eq.${id},tutor_id.eq.${id}`);
+      if (bErr) return json(cors, { error: bErr.message }, 400);
       await admin.storage.from("avatars").remove([`${id}/avatar.jpg`]);
       const { error } = await admin.auth.admin.deleteUser(id);
       if (error) return json(cors, { error: error.message }, 400);
