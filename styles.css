@@ -3012,3 +3012,164 @@ html.js .q.rv.vis .qc {
     transform: none;
   }
 }
+
+/* ===== v11: university logo wall (replaces the map for now) =====
+   One seamless sheet inside the panel: hairline dividers instead of separate tiles,
+   logos in the site's ink tone, brand colour revealed on hover / press. */
+.logos {
+  list-style: none;
+  margin: 22px 0 0;
+  padding: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-auto-rows: minmax(96px, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.logos li {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 18px 22px;
+  background: var(--surf);
+  text-align: center;
+  isolation: isolate;
+}
+
+/* soft wine glow that rises behind the logo on hover */
+.logos li::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(
+    110% 85% at 50% 115%,
+    rgba(197, 3, 55, 0.16),
+    rgba(111, 34, 50, 0.06) 55%,
+    transparent 80%
+  );
+  opacity: 0;
+  transition: opacity 0.35s var(--ease);
+}
+
+.logos .ulogo {
+  position: relative;
+  display: block;
+  height: 40px; /* replaced per logo by logoFit() */
+  max-width: 100%;
+  animation: tileIn 0.7s var(--ease) both;
+  animation-delay: calc(var(--i) * 60ms + 0.5s);
+  transition: transform 0.45s var(--ease);
+}
+
+.logos .ulogo img {
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  transition: opacity 0.35s var(--ease);
+}
+
+.logos .m {
+  opacity: 0.74;
+}
+
+.logos .c {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+}
+
+@media (hover: hover) {
+  .logos li:hover::before {
+    opacity: 1;
+  }
+  .logos li:hover .m {
+    opacity: 0;
+  }
+  .logos li:hover .c {
+    opacity: 1;
+  }
+  .logos li:hover .lg {
+    transform: scale(1.04);
+  }
+}
+
+/* instant feedback on press (touch included) */
+.logos li:active::before {
+  opacity: 1;
+}
+.logos li:active .m {
+  opacity: 0;
+}
+.logos li:active .c {
+  opacity: 1;
+}
+.logos li:active .lg {
+  transform: scale(0.97);
+  transition-duration: 0.1s;
+}
+
+.logos li:not(.nologo) .ln {
+  display: none;
+}
+
+.logos .ln {
+  font:
+    600 0.95rem/1.2 Gabarito,
+    Onest,
+    sans-serif;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.logos .ln small {
+  display: block;
+  margin-top: 3px;
+  font:
+    500 0.76rem Onest,
+    sans-serif;
+  color: var(--mut);
+}
+
+@keyframes tileIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1180px) {
+  .logos .ln {
+    font-size: 0.84rem;
+  }
+}
+
+@media (max-width: 460px) {
+  .logos {
+    grid-auto-rows: minmax(80px, 1fr);
+  }
+  .logos li {
+    padding: 14px;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .logos .m {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logos .ulogo {
+    animation: none;
+    transform: none !important;
+  }
+}

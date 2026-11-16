@@ -166,19 +166,22 @@ const C = {
     "Personalized 1-on-1 support",
     "University student tutors",
   ],
-  // Hero "Where our tutors study" list, west to east. The city must match a key in
-  // MAP.cities (London, Waterloo, Hamilton, Toronto, Kingston, Ottawa) to get a pin.
+  // Hero "Where our tutors study" logo wall: [name, city, logo file slug].
+  // Logos load from assets/unis/mono/<slug>.png (single-tone, built from the colour
+  // file in assets/unis/<slug>.png by scripts/build-uni-logos.py); the colour file
+  // fades in on hover/press. Until a file exists, its tile shows the name instead.
+  // (City must match a key in MAP.cities if the map is switched back on.)
   unis: [
-    ["Western University", "London"],
-    ["University of Waterloo", "Waterloo"],
-    ["Wilfrid Laurier University", "Waterloo"],
-    ["McMaster University", "Hamilton"],
-    ["University of Toronto", "Toronto"],
-    ["York University", "Toronto"],
-    ["Toronto Metropolitan University", "Toronto"],
-    ["Queen’s University", "Kingston"],
-    ["University of Ottawa", "Ottawa"],
-    ["Carleton University", "Ottawa"],
+    ["Western University", "London", "western"],
+    ["University of Waterloo", "Waterloo", "waterloo"],
+    ["Wilfrid Laurier University", "Waterloo", "laurier"],
+    ["McMaster University", "Hamilton", "mcmaster"],
+    ["University of Toronto", "Toronto", "uoft"],
+    ["York University", "Toronto", "york"],
+    ["Toronto Metropolitan University", "Toronto", "tmu"],
+    ["Queen’s University", "Kingston", "queens"],
+    ["University of Ottawa", "Ottawa", "uottawa"],
+    ["Carleton University", "Ottawa", "carleton"],
   ],
   intro:
     "Cultivar+ connects students in Grades 9–12 with university tutors who recently took the same courses and made the same transition.",
@@ -759,22 +762,35 @@ function blossomFrame() {
   // blossoms: corners pushed outward so the petals stay clear of the content
   const spots = [];
   const o = small ? 12 : 22;
+  // ord = position clockwise around the frame (0–10), so blossoms open in a sweep
+  const ordAt = (s) => (10 * (((s % P) + P) % P)) / P;
   spots.push(
     [x0 - o, y0 - o, 1.35, 0],
-    [x0 + w + o, y0 - o * 0.4, 1.18, 2],
-    [x0 + w + o * 0.7, y0 + h + o, 1.4, 5],
-    [x0 - o, y0 + h + o * 0.6, 1.25, 7],
+    [x0 + w + o, y0 - o * 0.4, 1.18, ordAt(sw + arc / 2)],
+    [x0 + w + o * 0.7, y0 + h + o, 1.4, ordAt(sRight + sh + arc / 2)],
+    [x0 - o, y0 + h + o * 0.6, 1.25, ordAt(sBottom + sw + arc / 2)],
   );
-  const side = (s, out, k, ord) => {
+  const side = (s, out, k) => {
     const [x, y, nx, ny] = at(s);
-    spots.push([x + nx * out * sc, y + ny * out * sc, k, ord]);
+    spots.push([x + nx * out * sc, y + ny * out * sc, k, ordAt(s)]);
   };
-  side(sTop + sw * 0.64, 22, 0.92, 1);
-  side(sRight + sh * 0.34, 26, 1.05, 3);
-  side(sRight + sh * 0.72, 22, 0.88, 4);
-  side(sBottom + sw * 0.44, 24, 0.98, 6);
-  side(sLeft + sh * 0.32, 26, 0.95, 8);
-  if (!small) side(sLeft + sh * 0.7, 22, 0.84, 9);
+  // fill every side evenly between the corner blossoms, with a little natural jitter
+  const gap = small ? 92 : 124;
+  [
+    [sTop, sw],
+    [sRight, sh],
+    [sBottom, sw],
+    [sLeft, sh],
+  ].forEach(([s0, len], si) => {
+    const n = Math.max(1, Math.round(len / gap) - 1),
+      step = len / (n + 1);
+    for (let q = 1; q <= n; q++) {
+      const jitter = (rnd() - 0.5) * step * 0.3,
+        out = (q + si) % 2 ? 26 : 18,
+        k = 0.76 + rnd() * 0.24;
+      side(s0 + q * step + jitter, out, k);
+    }
+  });
   const petal =
     "M0 -2C-20 -8 -31 -30 -19 -46C-12 -55 -4 -53 0 -47C4 -53 12 -55 19 -46C31 -30 20 -8 0 -2Z";
   const blossom = ([x, y, k, ord]) => {
@@ -835,6 +851,27 @@ function blossomFrame() {
   frameRO.disconnect();
   frameRO.observe(panel);
 }
+// Size each logo by its shape so wide wordmarks and stacked logos carry similar weight
+// (equal visual area), then keep a clear margin inside the tile on every side.
+function logoFit(img) {
+  const li = img.closest("li");
+  if (!li || !img.naturalWidth) return;
+  const r = img.naturalWidth / img.naturalHeight,
+    small = window.matchMedia("(max-width: 460px)").matches,
+    area = small ? 3600 : 5200,
+    maxW = li.clientWidth * 0.7, // at least 15% clear space left and right
+    maxH = li.clientHeight * 0.56, // at least 22% clear space top and bottom
+    h = Math.min(small ? 48 : 58, Math.sqrt(area / r), maxW / r, maxH);
+  img.parentNode.style.height = h.toFixed(1) + "px";
+}
+let logoRefit;
+window.addEventListener("resize", () => {
+  cancelAnimationFrame(logoRefit);
+  logoRefit = requestAnimationFrame(() =>
+    document.querySelectorAll(".logos .m").forEach(logoFit),
+  );
+});
+window.logoFit = logoFit;
 function uniHover() {
   const box = $(".unis");
   if (!box) return;
@@ -847,8 +884,23 @@ function uniHover() {
     e.addEventListener("pointerleave", () => hl(e.dataset.c, false));
   });
 }
+// The Cultivar+ bloom: four marker-stroke petals that read as the "+" in the wordmark.
+const MARK_PETAL =
+  "M0 -11C-8 -15 -10.5 -31 -9 -44C-8 -53 8 -53 9 -44C10.5 -31 8 -15 0 -11Z";
 const bloomSvg = () =>
-  `<svg class="bloom" viewBox="-60 -60 120 120" aria-hidden="true"><defs><linearGradient id="bg1" x1="0" x2="1"><stop offset="0" stop-color="#6f2232"/><stop offset="1" stop-color="#c50337"/></linearGradient></defs><g fill="url(#bg1)">${[0, 90, 180, 270].map((r) => `<path transform="rotate(${r})" d="M0 -8C-26 -22 -22 -54 0 -56C22 -54 26 -22 0 -8Z"/>`).join("")}</g><circle r="11" fill="#ff6a8c"/></svg>`;
+  `<svg class="bloom" viewBox="-60 -60 120 120" aria-hidden="true"><defs><linearGradient id="bg1" gradientUnits="userSpaceOnUse" x1="-30" y1="-55" x2="30" y2="55"><stop offset="0" stop-color="#e0174d"/><stop offset=".5" stop-color="#c50337"/><stop offset="1" stop-color="#950740"/></linearGradient></defs><g fill="url(#bg1)">${[
+    [0, 1],
+    [89, 0.95],
+    [181, 1.03],
+    [271, 0.97],
+  ]
+    .map(
+      ([r, k]) =>
+        `<path transform="rotate(${r}) scale(${k})" d="${MARK_PETAL}"/>`,
+    )
+    .join(
+      "",
+    )}</g><circle r="12.5" fill="#ff6a8c"/><circle cx="-3.5" cy="-3.5" r="4" fill="#ffc4d1"/></svg>`;
 const av = (t, c = "av") =>
   t.photo
     ? `<img class="${c} ph" src="${esc(t.photo)}" alt="${esc(t.name)}">`
@@ -1054,7 +1106,7 @@ function home() {
     .map((w, i) => `<span class="w" style="--i:${i}">${w}</span>`)
     .join(
       " ",
-    )}</h1><p class="sub">${C.sub}</p><div class="row"><a class="btn" href="#tutors">Meet our tutors</a><a class="btn alt" href="#book" data-track="book">Book a Session</a></div><ul class="facts">${C.facts.map((f) => `<li>${f}</li>`).join("")}</ul><p class="intro">${C.intro}</p></div><div class="uwrap"><aside class="unis" aria-labelledby="uh"><div class="uhd"><h2 id="uh">Where our tutors study</h2><p>Across Ontario, from London to Ottawa.</p></div>${uniMap()}<ul class="ulist">${C.unis.map(([n, c]) => `<li data-c="${c}" title="${c}"><i aria-hidden="true"></i><span>${n}</span></li>`).join("")}</ul></aside></div></div></section>
+    )}</h1><p class="sub">${C.sub}</p><div class="row"><a class="btn" href="#tutors">Meet our tutors</a><a class="btn alt" href="#book" data-track="book">Book a Session</a></div><ul class="facts">${C.facts.map((f) => `<li>${f}</li>`).join("")}</ul><p class="intro">${C.intro}</p></div><div class="uwrap"><aside class="unis" aria-labelledby="uh"><div class="uhd"><h2 id="uh">Where our tutors study</h2><p>Across Ontario, from London to Ottawa.</p></div><ul class="logos" aria-label="Universities">${C.unis.map(([n, c, sl], i) => `<li style="--i:${i}" title="${n}, ${c}"><span class="ulogo"><img class="m" src="assets/unis/mono/${sl}.png" alt="${n}" decoding="async" onload="logoFit(this)" onerror="this.closest('li').classList.add('nologo');this.parentNode.remove()"><img class="c" src="assets/unis/${sl}.png" alt="" aria-hidden="true" decoding="async" loading="lazy"></span><span class="ln">${n}<small>${c}</small></span></li>`).join("")}</ul></aside></div></div></section>
 <section id="tutors-sec"><div class="wrap"><h2 class="center">Choose a mentor, not just a tutor</h2><p class="mut center">Pick by subject, university, program or personality. Every tutor is a real university student.</p><div class="tg" style="margin-top:36px">${T.length ? T.slice(0, 6).map(tcard).join("") : '<p class="mut center">New tutors are joining soon.</p>'}</div><p class="center" style="margin-top:32px"><a class="btn alt" href="#tutors">Browse all tutors</a></p></div></section>
 <section class="about"><div class="wrap"><h2>How it works</h2><div class="steps four"><div><h3>Browse tutors</h3><p class="mut">Filter by subject, university and interests.</p></div><div><h3>Read a profile</h3><p class="mut">Meet the person behind the subject.</p></div><div><h3>Book a time</h3><p class="mut">See live availability and pick a slot.</p></div><div><h3>Pay and learn</h3><p class="mut">Pay by card after booking, then meet online.</p></div></div></div></section>
 <section><div class="wrap"><h2 class="center">What we help with</h2><p class="mut center">Senior-level courses, plus the things school doesn’t always teach.</p><div class="help">${C.help.map(([h, items]) => `<div><h3>${h}</h3><ul>${items.map((i) => `<li>${i}</li>`).join("")}</ul></div>`).join("")}</div></div></section>
