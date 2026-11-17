@@ -193,15 +193,6 @@ const C = {
     "We believe tutoring should go beyond completing homework or preparing for the next test. Students should be able to build confidence, improve their understanding, develop stronger study habits, and learn from someone who has recently experienced the same academic and university transition.",
     "Our tutors provide personalized academic support while also being available to share their own experiences with university programs, applications, study habits, and student life.",
   ],
-  words: [
-    "Personal",
-    "Friendly",
-    "Youthful",
-    "Trustworthy",
-    "Modern",
-    "Supportive",
-    "Professional",
-  ],
   subjects: [
     "Grade 9–10 Mathematics",
     "Functions",
@@ -245,17 +236,14 @@ const C = {
     [
       "They just took your course.",
       "Your tutor sat the same senior courses recently, so the material, and the parts that trip people up, are still fresh.",
-      "book",
     ],
     [
       "They’ve made the jump you’re about to.",
       "Applications, choosing a program, first year: ask someone who just went through it.",
-      "path",
     ],
     [
       "You choose who you learn with.",
       "Pick by subject, university, program, personality or interests, not whoever happens to be free.",
-      "person",
     ],
   ],
   faq: [
@@ -289,19 +277,62 @@ const C = {
 // "University of Toronto" and the Tutors-page filter never shows duplicates.
 // Format: [official name, ...aliases]. Matching ignores case, punctuation and "the".
 const UNIS = [
-  ["University of Toronto", "uoft", "u of t", "utoronto", "toronto", "uoft st george", "utsg", "uoft mississauga", "utm", "uoft scarborough", "utsc"],
-  ["Western University", "western", "uwo", "university of western ontario", "western ontario"],
+  [
+    "University of Toronto",
+    "uoft",
+    "u of t",
+    "utoronto",
+    "toronto",
+    "uoft st george",
+    "utsg",
+    "uoft mississauga",
+    "utm",
+    "uoft scarborough",
+    "utsc",
+  ],
+  [
+    "Western University",
+    "western",
+    "uwo",
+    "university of western ontario",
+    "western ontario",
+  ],
   ["University of Waterloo", "waterloo", "uwaterloo", "uw", "u waterloo"],
   ["Wilfrid Laurier University", "laurier", "wlu", "wilfrid laurier"],
   ["McMaster University", "mcmaster", "mac", "mcmaster u"],
-  ["Queen’s University", "queens", "queens u", "queensu", "queens university at kingston"],
-  ["University of Ottawa", "uottawa", "u of o", "uo", "ottawa u", "universite d ottawa"],
+  [
+    "Queen’s University",
+    "queens",
+    "queens u",
+    "queensu",
+    "queens university at kingston",
+  ],
+  [
+    "University of Ottawa",
+    "uottawa",
+    "u of o",
+    "uo",
+    "ottawa u",
+    "universite d ottawa",
+  ],
   ["Carleton University", "carleton", "carleton u"],
   ["York University", "york", "yorku", "york u"],
-  ["Toronto Metropolitan University", "tmu", "ryerson", "ryerson university", "toronto metropolitan", "torontomu"],
+  [
+    "Toronto Metropolitan University",
+    "tmu",
+    "ryerson",
+    "ryerson university",
+    "toronto metropolitan",
+    "torontomu",
+  ],
   ["University of Guelph", "guelph", "uofg", "u of g", "uoguelph"],
   ["Brock University", "brock", "brocku"],
-  ["Ontario Tech University", "ontario tech", "uoit", "university of ontario institute of technology"],
+  [
+    "Ontario Tech University",
+    "ontario tech",
+    "uoit",
+    "university of ontario institute of technology",
+  ],
   ["Trent University", "trent"],
   ["University of Windsor", "windsor", "uwindsor"],
   ["Lakehead University", "lakehead"],
@@ -317,14 +348,35 @@ const UNIS = [
   ["University of Manitoba", "umanitoba", "u of m", "manitoba"],
   ["McGill University", "mcgill"],
   ["Concordia University", "concordia"],
-  ["Université de Montréal", "udem", "universite de montreal", "university of montreal"],
+  [
+    "Université de Montréal",
+    "udem",
+    "universite de montreal",
+    "university of montreal",
+  ],
   ["Dalhousie University", "dalhousie", "dal"],
-  ["Memorial University of Newfoundland", "memorial", "mun", "memorial university"],
+  [
+    "Memorial University of Newfoundland",
+    "memorial",
+    "mun",
+    "memorial university",
+  ],
 ];
 const PROGRAMS = [
-  ["Computer Science", "cs", "comp sci", "compsci", "comp-sci", "computing science"],
+  [
+    "Computer Science",
+    "cs",
+    "comp sci",
+    "compsci",
+    "comp-sci",
+    "computing science",
+  ],
   ["Software Engineering", "se", "softeng", "software eng"],
-  ["Electrical and Computer Engineering", "ece", "electrical computer engineering"],
+  [
+    "Electrical and Computer Engineering",
+    "ece",
+    "electrical computer engineering",
+  ],
   ["Electrical Engineering", "ee", "electrical eng", "elec eng"],
   ["Computer Engineering", "ce", "comp eng", "computer eng"],
   ["Mechanical Engineering", "mech", "mech eng", "mechanical eng"],
@@ -347,7 +399,15 @@ const PROGRAMS = [
   ["Statistics", "stats", "stat"],
   ["Actuarial Science", "actsci", "act sci", "actuarial"],
   ["Data Science", "data sci"],
-  ["Business Administration", "bba", "business", "business admin", "hba", "ivey", "ivey hba"],
+  [
+    "Business Administration",
+    "bba",
+    "business",
+    "business admin",
+    "hba",
+    "ivey",
+    "ivey hba",
+  ],
   ["Commerce", "comm", "bcom", "commerce"],
   ["Accounting", "acc", "accounting and financial management", "afm"],
   ["Finance", "fin"],
@@ -392,7 +452,9 @@ const UNI_BY = aliasMap(UNIS),
   PROG_BY = aliasMap(PROGRAMS);
 // Official name when we recognize it; otherwise the person's own text, tidied.
 const canonName = (by) => (s) => {
-  const raw = String(s || "").replace(/\s+/g, " ").trim(),
+  const raw = String(s || "")
+      .replace(/\s+/g, " ")
+      .trim(),
     k = nameKey(raw);
   return by.get(k) || by.get(k.replace(/ /g, "")) || raw;
 };
@@ -405,7 +467,10 @@ const splitProgram = (s) => {
   );
   if (!m) return [String(s || "").trim(), ""];
   const n = +(m[3] || m[4] || 0);
-  return [m[1].trim(), m[5] ? "Graduate" : n >= 5 ? "Year 5+" : n ? "Year " + n : ""];
+  return [
+    m[1].trim(),
+    m[5] ? "Graduate" : n >= 5 ? "Year 5+" : n ? "Year " + n : "",
+  ];
 };
 const joinProgram = (prog, yr) =>
   [canonProg(prog), yr].filter(Boolean).join(", ");
@@ -990,6 +1055,8 @@ async function go() {
     account,
     admin,
     paid,
+    privacy,
+    terms,
   };
   if (!R[r]) r = "home";
   await ensure(r);
@@ -1026,6 +1093,8 @@ async function go() {
       account: "Dashboard",
       admin: "Admin",
       profile: "Tutor profile",
+      privacy: "Privacy Policy",
+      terms: "Terms of Service",
     }[r] || "Cultivar+ | Learn from someone who’s been where you are.") +
     (r === "home" ? "" : " | Cultivar+");
 }
@@ -1042,20 +1111,175 @@ document.addEventListener("click", (e) => {
     } else $("#" + s.dataset.scroll)?.scrollIntoView();
   }
 });
+// ===== PRIVACY POLICY + TERMS =====
+// Plain-language drafts. Have a lawyer review them before relying on them.
+// Fill in LEGAL.address (Ontario's Consumer Protection Act expects a business address
+// to be shown before someone pays) and check the refund rules match what you do.
+const LEGAL = {
+  updated: "November 17, 2026",
+  address: "", // e.g. "123 Example St, Toronto, ON M5V 0A0". Shown on both pages once filled.
+  refundDays: 24, // hours before a session that a paid booking can be cancelled for a full refund
+};
+const legalContact = () =>
+  `<p>Email <a href="mailto:${esc(C.email)}">${esc(C.email)}</a>${LEGAL.address ? `, or write to Cultivar+, ${esc(LEGAL.address)}` : ""}.</p>`;
+const legalPage = (title, intro, sections) => {
+  const toc = sections
+    .map(([h], i) => `<li><a href="#" data-sec="lg${i}">${h}</a></li>`)
+    .join("");
+  return `<section class="pg legal"><div class="wrap"><h1 class="h">${title}</h1><p class="mut lg-upd">Last updated ${LEGAL.updated}</p><p class="lead">${intro}</p><nav class="lg-toc" aria-label="On this page"><ol>${toc}</ol></nav>${sections
+    .map(([h, body], i) => `<h2 id="lg${i}">${h}</h2>${body}`)
+    .join("")}<p class="lg-alt">See also our ${title === "Privacy Policy" ? '<a href="#terms">Terms of Service</a>' : '<a href="#privacy">Privacy Policy</a>'}.</p></div></section>`;
+};
+document.addEventListener("click", (e) => {
+  const a = e.target.closest?.("[data-sec]");
+  if (!a) return;
+  e.preventDefault();
+  document.getElementById(a.dataset.sec)?.scrollIntoView({ behavior: "smooth" });
+});
+
+function privacy() {
+  $("#app").innerHTML = legalPage(
+    "Privacy Policy",
+    "Cultivar+ is a tutoring service based in Ontario, Canada. This policy explains what personal information we collect, why, who can see it, and the choices you have. We follow Canada’s federal private-sector privacy law, the <i>Personal Information Protection and Electronic Documents Act</i> (PIPEDA).",
+    [
+      [
+        "What we collect",
+        `<ul>
+<li><b>Everyone with an account:</b> your name, email address and password. Passwords are stored in a scrambled (hashed) form; we can’t read them.</li>
+<li><b>Students:</b> your grade, and for each booking the tutor, subject, date and time, session format (online or in person), any notes you add, and whether the session has been paid.</li>
+<li><b>Tutors:</b> your university, program and year, the subjects you tutor, your interests, a short bio, a profile photo, your hourly rate, your weekly availability and days off, and an optional Stripe payment link.</li>
+<li><b>Contact form:</b> the name, email and message you send us.</li>
+<li><b>Usage counts:</b> we count a few anonymous events (for example, how many times the home page is viewed or the Book button is clicked). These counts aren’t linked to you or your account.</li>
+</ul>
+<p>We don’t collect card numbers. When you pay, you enter your card details directly with Stripe, our payment processor.</p>`,
+      ],
+      [
+        "Why we use it",
+        `<ul>
+<li>To create and run your account and let you log in.</li>
+<li>To match students with tutors, schedule sessions and show availability.</li>
+<li>To take payment and send booking and payment confirmations.</li>
+<li>To answer messages you send us.</li>
+<li>To keep the service safe, for example by suspending accounts that break our <a href="#terms">Terms</a>.</li>
+<li>To understand, in aggregate, how the site is used so we can improve it.</li>
+</ul>
+<p>We don’t sell personal information, and we don’t use it for advertising. We only send emails about your account and bookings. If we ever want to send newsletters or promotions, we’ll ask for your permission first.</p>`,
+      ],
+      [
+        "Who can see your information",
+        `<ul>
+<li><b>The public:</b> tutor profiles are public. Anyone can see a tutor’s name, university, program, subjects, interests, bio, photo, rate and open times. Tutors’ email addresses are not shown.</li>
+<li><b>Your tutor:</b> when a student books a session, that tutor can see the student’s name, grade, email address, the subject and any notes.</li>
+<li><b>Cultivar+ administrators:</b> can see account and booking information to run the service and help with problems.</li>
+<li><b>Service providers</b> who process information for us:
+<ul>
+<li>Supabase: database, logins and photo storage</li>
+<li>Stripe: card payments</li>
+<li>Google: Gmail sends our emails, and Google Fonts serves the site’s fonts</li>
+<li>jsDelivr: delivers a code library the site uses</li>
+</ul>
+They may only use it to provide their service to us.</li>
+<li><b>When the law requires it,</b> for example a valid court order.</li>
+</ul>`,
+      ],
+      [
+        "Where it’s stored",
+        "<p>Our service providers may store and process information outside Canada, including in the United States. While it’s there, it may be accessible to courts and authorities in that country under their laws.</p>",
+      ],
+      [
+        "Students under 18",
+        "<p>Our students are in Grades 9 to 12, and many are under 18. A student under 18 should only create an account with the knowledge and permission of a parent or guardian, and a parent or guardian should make or approve payments. A parent or guardian can contact us at any time to ask what we hold about their child or to have the account deleted.</p>",
+      ],
+      [
+        "How long we keep it",
+        "<ul><li>We keep account and booking information while your account is open.</li><li>When an account is deleted, its profile, photo, availability and bookings are deleted from our database. Stripe keeps its own payment records as required by financial rules.</li><li>We keep contact-form messages only as long as we need them to respond and keep basic records, and we delete them on request.</li></ul>",
+      ],
+      [
+        "Browser storage and cookies",
+        "<p>The site stores a few items in your browser to keep you logged in and remember where you were (for example, a booking in progress). We don’t use advertising or cross-site tracking cookies.</p>",
+      ],
+      [
+        "How we protect it",
+        "<p>Access to personal information is limited by account. Students see only their own bookings, tutors see only their own students, and only administrators see everything. Connections to the site are encrypted. If a breach creates a real risk of significant harm, we’ll notify you and the Office of the Privacy Commissioner of Canada as the law requires.</p>",
+      ],
+      [
+        "Your choices and rights",
+        `<ul>
+<li><b>See or correct your information:</b> most of it is in your dashboard, where you can edit it. You can also ask us for a copy of everything we hold about you.</li>
+<li><b>Delete your account:</b> email us and we’ll delete it.</li>
+<li><b>Withdraw consent:</b> you can do this at any time, but we may then be unable to provide the service.</li>
+</ul>
+<p>We’ll reply within 30 days. If you’re not satisfied with our answer, you can complain to the <a href="https://www.priv.gc.ca" target="_blank" rel="noopener">Office of the Privacy Commissioner of Canada</a>.</p>`,
+      ],
+      ["Changes to this policy", "<p>If we make a significant change, we’ll update the date above and tell account holders by email before it takes effect.</p>"],
+      ["Contact our privacy contact", legalContact()],
+    ],
+  );
+}
+
+function terms() {
+  const h = LEGAL.refundDays;
+  $("#app").innerHTML = legalPage(
+    "Terms of Service",
+    "These terms are the agreement between you and Cultivar+ when you use this website or book a session. Please read them before you create an account or pay. If you’re under 18, a parent or guardian should read them with you.",
+    [
+      [
+        "About Cultivar+",
+        `<p>Cultivar+ is a tutoring service based in Ontario, Canada. It connects high school students with tutors who are current university students. Cultivar+ is independent and isn’t affiliated with or endorsed by any university.${LEGAL.address ? ` Our business address is ${esc(LEGAL.address)}.` : ""}</p>`,
+      ],
+      [
+        "Accounts",
+        "<ul><li>Give accurate information and keep your password private. You’re responsible for activity on your account.</li><li>If you’re under 18, you need a parent or guardian’s permission to use Cultivar+, and they’re responsible for any payments.</li><li>Tutors must be currently enrolled at a university and keep their profile accurate. We may ask for proof of enrolment.</li><li>We may suspend or close an account that breaks these terms or puts others at risk.</li></ul>",
+      ],
+      [
+        "Booking and prices",
+        "<ul><li>Each tutor’s hourly price is shown in Canadian dollars on their profile and again before you confirm a booking. It includes all fees we charge.</li><li>If sales tax applies to a session, it will be shown before you pay.</li><li>A booking reserves a time with your tutor. You pay by card through Stripe after booking, and you’ll get a confirmation by email.</li><li>Sessions take place online or in person, as chosen when booking.</li></ul>",
+      ],
+      [
+        "Cancellations and refunds",
+        `<ul>
+<li><b>Cancelling ${h}+ hours before:</b> you can cancel from your dashboard. A paid session cancelled this way gets a full refund.</li>
+<li><b>Later cancellations and missed sessions:</b> sessions cancelled less than ${h} hours before the start, or missed without notice, aren’t refunded. If you have an emergency, contact us and we’ll look at it fairly.</li>
+<li><b>If we or your tutor cancel:</b> you get a full refund, or a free reschedule if you prefer.</li>
+<li><b>If a session doesn’t happen as booked</b> (for example, the tutor doesn’t show up), contact us within 7 days and we’ll refund or reschedule it.</li>
+<li><b>How refunds are paid:</b> to the card you paid with. They usually appear within 5 to 10 business days.</li>
+</ul>
+<p>Nothing in these terms limits any right you have under Ontario’s <i>Consumer Protection Act</i>.</p>`,
+      ],
+      [
+        "Conduct and safety",
+        "<ul><li>Treat each other with respect. Harassment, discrimination, or any inappropriate contact with a student is not allowed and will lead to the account being closed. Where the law requires, it will also be reported to the authorities.</li><li>Keep communication about sessions professional. Don’t ask for or share personal contact details beyond what a session needs.</li><li>For in-person sessions, we recommend meeting in a public place such as a library, or at home with a parent or guardian present.</li><li>Don’t use Cultivar+ to complete graded work for a student or to cheat. Tutors help students learn; they don’t do the work for them.</li></ul>",
+      ],
+      [
+        "What we don’t promise",
+        "<p>Tutors share their knowledge and their own experience with courses, programs and applications. That advice isn’t a guarantee of any grade, admission or outcome. To the extent the law allows, Cultivar+ isn’t responsible for indirect losses, and our total responsibility for a booking is limited to the amount you paid for it.</p>",
+      ],
+      [
+        "Content and names",
+        "<p>The Cultivar+ name and logo belong to Cultivar+. University names are used only to describe where tutors study, and they belong to their owners. Tutors are responsible for the bio and photo they upload, and give us permission to show them on the site.</p>",
+      ],
+      [
+        "Changes to these terms",
+        "<p>We may update these terms. We’ll change the date above and email account holders about significant changes. Bookings already made keep the terms that applied when they were booked.</p>",
+      ],
+      [
+        "Governing law",
+        "<p>These terms are governed by the laws of Ontario and the federal laws of Canada that apply there.</p>",
+      ],
+      ["Contact", legalContact()],
+    ],
+  );
+}
 // ===== HOME =====
 // ---- "What we help with" cards + "Why a university student" icons ----
+// Line icons for "Why a university student?", in the same order as C.why.
+const WHY_ICON = [
+  '<svg viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"/></svg>',
+  '<svg viewBox="0 0 24 24"><path d="M5 19 19 5"/><path d="M9 5h10v10"/></svg>',
+  '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5"/></svg>',
+];
 const HELP_SUBJ = { "Other high school subjects": "Other subjects" };
 let pendingSubj = null; // set by a subject link, read once by tutors()
-const ICON = {
-  book: '<svg viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"/></svg>',
-  path: '<svg viewBox="0 0 24 24"><path d="M5 19 19 5"/><path d="M9 5h10v10"/></svg>',
-  person: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5"/></svg>',
-  math: '<svg viewBox="0 0 24 24"><path d="M5 7h6M8 4v6M14 7h5M5 17l5-5M10 17l-5-5M14 15h5M14 19h5"/></svg>',
-  sci: '<svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3"/><path d="M7.5 15h9"/></svg>',
-  pen: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/></svg>',
-  cap: '<svg viewBox="0 0 24 24"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c2 2 10 2 12 0v-5"/></svg>',
-};
-const HELP_ICON = ["math", "sci", "pen", "cap"];
 document.addEventListener("click", (e) => {
   const a = e.target.closest?.("[data-subj]");
   if (a) pendingSubj = a.dataset.subj;
@@ -1071,7 +1295,7 @@ function helpCard(h, items, gi, T) {
       return `<li><a class="hl-link" href="#tutors" data-subj="${esc(subj)}"><span class="hl-name">${i}</span><span class="hl-meta">${n ? `${n} tutor${n > 1 ? "s" : ""}` : ""}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></a></li>`;
     })
     .join("");
-  return `<div class="hcard${beyond ? " beyond" : ""}"><div class="hc-top"><span class="why-ic" aria-hidden="true">${ICON[HELP_ICON[gi] || "book"]}</span><h3>${h}</h3></div>${beyond ? '<p class="hc-note">Ask any tutor. It comes with every session.</p>' : ""}<ul>${rows}</ul></div>`;
+  return `<div class="hcard${beyond ? " beyond" : ""}"><h3 class="hc-top">${h}</h3>${beyond ? '<p class="hc-note">Ask any tutor. It comes with every session.</p>' : ""}<ul>${rows}</ul></div>`;
 }
 function home() {
   track("page_home");
@@ -1086,10 +1310,10 @@ function home() {
 <section id="tutors-sec"><div class="wrap"><h2 class="center">Choose a mentor, not just a tutor</h2><p class="mut center">Pick by subject, university, program or personality. Every tutor is a real university student.</p><div class="tg" style="margin-top:36px">${T.length ? T.slice(0, 6).map(tcard).join("") : '<p class="mut center">New tutors are joining soon.</p>'}</div><p class="center" style="margin-top:32px"><a class="btn alt" href="#tutors">Browse all tutors</a></p></div></section>
 <section class="about"><div class="wrap"><h2>How it works</h2><div class="steps four"><div><h3>Browse tutors</h3><p class="mut">Filter by subject, university and interests.</p></div><div><h3>Read a profile</h3><p class="mut">Meet the person behind the subject.</p></div><div><h3>Book a time</h3><p class="mut">See live availability and pick a slot.</p></div><div><h3>Pay and learn</h3><p class="mut">Pay by card after booking, then meet online.</p></div></div></div></section>
 <section class="helpsec"><div class="wrap"><h2 class="center">What we help with</h2><p class="mut center">Senior-level courses, plus the things school doesn’t always teach. Pick a subject to see who teaches it.</p><div class="help">${C.help.map(([h, items], gi) => helpCard(h, items, gi, T)).join("")}</div></div></section>
-<section class="why"><div class="wrap"><div class="why-head"><h2>Why a university student?</h2><p class="mut">The person helping you was in your seat not long ago.</p></div><ul class="why-list">${C.why.map(([h, p, ic]) => `<li><span class="why-ic" aria-hidden="true">${ICON[ic]}</span><h3>${h}</h3><p>${p}</p></li>`).join("")}</ul></div></section>
-<section id="about" class="about"><div class="wrap split"><div><h2>Who we are</h2><div class="tags" style="margin-top:18px">${C.words.map((w) => `<span class="tag">${w}</span>`).join("")}</div></div><div>${C.overview.map((p) => `<p>${p}</p>`).join("")}<h3 style="margin-top:28px">Our mission</h3>${C.mission.map((p) => `<p>${p}</p>`).join("")}</div></div></section>
-<section id="faq"><div class="wrap split"><h2>Questions, answered</h2><div>${C.faq.map((f) => `<details><summary>${f[0]}</summary><p>${f[1]}</p></details>`).join("")}</div></div></section>
-<section class="cta" id="contact"><div class="wrap"><div><h2>Ready to grow?</h2><p>Find the tutor who feels right and book in minutes.</p><div class="row"><a class="btn white" href="#tutors">Find a tutor</a></div><p style="margin-top:24px">${C.email}<br>${C.phone}</p></div>
+<section class="why"><div class="wrap"><div class="why-head"><h2>Why a university student?</h2></div><ul class="why-list">${C.why.map(([h, p], i) => `<li><span class="why-mark" aria-hidden="true">${WHY_ICON[i]}</span><h3>${h}</h3><p>${p}</p></li>`).join("")}</ul></div></section>
+<section id="about" class="about"><div class="wrap split"><div><h2>Who we are</h2></div><div>${C.overview.map((p) => `<p>${p}</p>`).join("")}<h3 style="margin-top:28px">Our mission</h3>${C.mission.map((p) => `<p>${p}</p>`).join("")}</div></div></section>
+<section id="faq"><div class="wrap split"><h2>Common questions</h2><div>${C.faq.map((f) => `<details><summary>${f[0]}</summary><p>${f[1]}</p></details>`).join("")}</div></div></section>
+<section class="cta" id="contact"><div class="wrap"><div><h2>Ready to grow?</h2><p>Find the tutor who feels right and book in minutes.</p><div class="row"><a class="btn white" href="#tutors">Find a tutor</a></div><p style="margin-top:24px">${C.email}${/[1-9]/.test(C.phone || "") ? `<br>${C.phone}` : ""}</p></div>
 <form id="cf" novalidate><label for="cn">Name</label><input id="cn"><label for="ce">Email</label><input id="ce" type="email"><label for="cm">Message</label><textarea id="cm" rows="4"></textarea><p class="err" id="cerr" role="alert"></p><button class="btn">Send message</button></form></div></section>`;
   fx();
   uniHover();
@@ -1240,6 +1464,40 @@ const tutorFields = (t) =>
   ) +
   `<fieldset class="fs"><legend>Subjects you tutor</legend>${C.subjects.map((s) => `<label class="chk"><input type="checkbox" name="sj" value="${s}" ${t.subjects?.includes(s) ? "checked" : ""}><span>${s}</span></label>`).join("")}</fieldset><label for="vb">Personality and interests (comma separated)</label><input id="vb" value="${esc((t.vibe || []).join(", "))}" placeholder="Patient, chess club, loves coffee"><label for="bi">Short bio</label><textarea id="bi" rows="4" maxlength="400">${esc(t.bio)}</textarea><label for="ph">Profile photo</label><input id="ph" type="file" accept="image/*"><label for="pl">Your Stripe Payment Link (optional)</label><input id="pl" value="${esc(t.payLink || "")}" placeholder="https://buy.stripe.com/...">`;
 
+// Checks every required tutor field, outlines the empty ones, and returns a message
+// naming what's missing ("" when the form is complete). Pass name to check #nm too.
+function tutorProblem(t, name) {
+  const need = [
+    name !== undefined && ["nm", !name.trim(), "your name"],
+    ["un", !t.uni, "university"],
+    ["pr", !$("#pr").value.trim(), "program"],
+    ["yr", !$("#yr").value, "year"],
+    [".fs", !t.subjects.length, "at least one subject"],
+    ["bi", t.bio.length < 20, "a short bio (20+ characters)"],
+  ].filter(Boolean);
+  const miss = [];
+  for (const [id, bad, label] of need) {
+    const el = id[0] === "." ? $(id) : $("#" + id);
+    if (el) {
+      el.setAttribute("aria-invalid", bad ? "true" : "false");
+      if (!el.dataset.watch) {
+        el.dataset.watch = 1;
+        el.addEventListener(id === ".fs" ? "change" : "input", () =>
+          el.setAttribute("aria-invalid", "false"),
+        );
+      }
+    }
+    if (bad) miss.push(label);
+  }
+  if (!miss.length) return "";
+  const list =
+    miss.length > 1
+      ? miss.slice(0, -1).join(", ") + " and " + miss[miss.length - 1]
+      : miss[0];
+  $('[aria-invalid="true"]')?.focus?.();
+  return "Please add " + list + ".";
+}
+
 function readTutor(existingPhoto = "") {
   const sj = [...document.querySelectorAll("[name=sj]:checked")].map(
     (x) => x.value,
@@ -1264,7 +1522,7 @@ function signup() {
   let role = sessionStorage.cvrole === "tutor" ? "tutor" : "student";
   sessionStorage.removeItem("cvrole");
   $("#app").innerHTML =
-    `<section class="pg"><div class="wrap" style="max-width:640px"><h1 class="h">Create your account</h1><div class="gb" role="group" aria-label="Account type" style="margin:14px 0"><button class="chip" id="rs" type="button">I'm a student</button><button class="chip" id="rt_" type="button">I'm a tutor</button></div><form id="sf" novalidate><div class="two"><div><label for="nm">Full name</label><input id="nm" autocomplete="name"></div><div><label for="em">Email</label><input id="em" type="email" autocomplete="email"></div></div><label for="pw">Password (8+ characters)</label><input id="pw" type="password" autocomplete="new-password"><div id="stu"><label for="gr">Grade</label><select id="gr">${[9, 10, 11, 12].map((g) => `<option>${g}</option>`).join("")}</select></div><div id="tu" hidden>${tutorFields({ subjects: [], vibe: [], bio: "", rate: 40 })}</div><label class="chk" style="margin-top:16px"><input type="checkbox" id="ck"><span>I agree to the Terms and Privacy Policy. If I'm under 18, a parent or guardian knows I'm signing up.</span></label><p class="err" id="er" role="alert"></p><button class="btn" style="width:100%;margin-top:14px">Create account</button><p style="margin-top:16px">Already have an account? <a href="#login">Log in</a></p></form></div></section>`;
+    `<section class="pg"><div class="wrap" style="max-width:640px"><h1 class="h">Create your account</h1><div class="gb" role="group" aria-label="Account type" style="margin:14px 0"><button class="chip" id="rs" type="button">I'm a student</button><button class="chip" id="rt_" type="button">I'm a tutor</button></div><form id="sf" novalidate><div class="two"><div><label for="nm">Full name</label><input id="nm" autocomplete="name"></div><div><label for="em">Email</label><input id="em" type="email" autocomplete="email"></div></div><label for="pw">Password (8+ characters)</label><input id="pw" type="password" autocomplete="new-password"><div id="stu"><label for="gr">Grade</label><select id="gr">${[9, 10, 11, 12].map((g) => `<option>${g}</option>`).join("")}</select></div><div id="tu" hidden>${tutorFields({ subjects: [], vibe: [], bio: "", rate: 40 })}</div><label class="chk" style="margin-top:16px"><input type="checkbox" id="ck"><span>I agree to the <a href="#terms" target="_blank">Terms of Service</a> and <a href="#privacy" target="_blank">Privacy Policy</a>. If I’m under 18, my parent or guardian has agreed to them too.</span></label><p class="err" id="er" role="alert"></p><button class="btn" style="width:100%;margin-top:14px">Create account</button><p style="margin-top:16px">Already have an account? <a href="#login">Log in</a></p></form></div></section>`;
   const set = (r) => {
     role = r;
     $("#rs").setAttribute("aria-pressed", r === "student");
@@ -1303,9 +1561,9 @@ function signup() {
     if (role === "student") meta.grade = +$("#gr").value;
     else {
       const t = readTutor("");
-      if (!t.uni || !t.program || !t.subjects.length || t.bio.length < 20) {
-        er.textContent =
-          "Tutors need a university, program, at least one subject and a short bio (20+ characters).";
+      const miss = tutorProblem(t);
+      if (miss) {
+        er.textContent = miss;
         return;
       }
       if (t.payLink && !PAY_LINK_RE.test(t.payLink)) {
@@ -1548,7 +1806,7 @@ function s3() {
     return;
   }
   $("#bs").innerHTML =
-    `<h2>Confirm your booking</h2><div class="card"><b>${esc(t.name)}</b> · ${esc(st.subject)}, ${gl(st.grade)}<br>${fmt(st.slot, st.tz, { weekday: "long", month: "long", day: "numeric" })}, ${tm(st.slot, st.tz)}<br>${money(price(t))} · you pay after booking</div><p class="mut" style="margin-top:12px">Booking as <b>${esc(m.name)}</b> (${esc(m.email)})</p><label for="fm">Session format</label><select id="fm"><option ${st.fm === "In person" ? "" : "selected"}>Online</option><option ${st.fm === "In person" ? "selected" : ""}>In person</option></select><label for="nt">What would you like help with? (optional)</label><textarea id="nt" rows="3">${esc(st.notes)}</textarea><p class="err" id="e" role="alert"></p><div class="nav2"><button class="btn alt" id="bk">Back</button><button class="btn" id="cf">Confirm booking</button></div>`;
+    `<h2>Confirm your booking</h2><div class="card"><b>${esc(t.name)}</b> · ${esc(st.subject)}, ${gl(st.grade)}<br>${fmt(st.slot, st.tz, { weekday: "long", month: "long", day: "numeric" })}, ${tm(st.slot, st.tz)}<br>${money(price(t))} · you pay after booking</div><p class="mut" style="margin-top:12px">Booking as <b>${esc(m.name)}</b> (${esc(m.email)})</p><label for="fm">Session format</label><select id="fm"><option ${st.fm === "In person" ? "" : "selected"}>Online</option><option ${st.fm === "In person" ? "selected" : ""}>In person</option></select><label for="nt">What would you like help with? (optional)</label><textarea id="nt" rows="3">${esc(st.notes)}</textarea><p class="mut lg-note">Paid sessions cancelled ${LEGAL.refundDays}+ hours ahead are fully refunded. By confirming, you agree to our <a href="#terms" target="_blank">Terms of Service</a>.</p><p class="err" id="e" role="alert"></p><div class="nav2"><button class="btn alt" id="bk">Back</button><button class="btn" id="cf">Confirm booking</button></div>`;
   $("#bk").onclick = () => {
     st.notes = $("#nt").value;
     st.fm = $("#fm").value;
@@ -1869,9 +2127,10 @@ function account() {
         cur = me();
       er.style.color = "";
       const chk = readTutor(cur.photo || "");
-      if (!chk.subjects.length || chk.bio.length < 20) {
+      const miss = tutorProblem(chk, $("#nm").value);
+      if (miss) {
         er.style.color = "#b00020";
-        er.textContent = "Add at least one subject and a short bio.";
+        er.textContent = miss;
         return;
       }
       if (chk.payLink && !PAY_LINK_RE.test(chk.payLink)) {
@@ -2094,9 +2353,9 @@ function admin() {
         if (role === "student") rec.grade = +$("#gr").value;
         else {
           const t = readTutor(x.photo || "");
-          if (!t.uni || !t.program || !t.subjects.length || t.bio.length < 20) {
-            er.textContent =
-              "Tutor needs university, program, a subject and a short bio.";
+          const miss = tutorProblem(t);
+          if (miss) {
+            er.textContent = miss;
             return;
           }
           if (t.payLink && !PAY_LINK_RE.test(t.payLink)) {

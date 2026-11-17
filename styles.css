@@ -3799,3 +3799,208 @@ header img {
     transform: none !important;
   }
 }
+
+/* ===== v19: missing required fields are outlined in crimson ===== */
+input[aria-invalid="true"],
+select[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border-color: var(--red) !important;
+  box-shadow: 0 0 0 3px rgba(197, 3, 55, 0.22);
+}
+
+fieldset[aria-invalid="true"] {
+  border-color: var(--red) !important;
+  box-shadow: 0 0 0 3px rgba(197, 3, 55, 0.22);
+  border-radius: 14px;
+}
+
+/* ===== v20: dropping the template tells =====
+   One quiet crimson wash instead of stacked glows, a one-colour headline that arrives
+   as a line, neutral button shadows, plain step labels, and no icon tiles. */
+.hero {
+  background:
+    linear-gradient(180deg, transparent 72%, var(--bg)),
+    radial-gradient(70% 90% at 82% 40%, rgba(197, 3, 55, 0.16), transparent 70%);
+}
+
+.hero .wrap::before {
+  display: none;
+}
+
+.hero h1 .w:nth-last-child(-n + 3) {
+  color: inherit;
+}
+
+.hero h1 .w {
+  animation: none;
+}
+
+.hero h1 {
+  animation: heroIn 0.7s var(--ease) both;
+}
+
+@keyframes heroIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+.unis {
+  background: var(--surf);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    var(--edge),
+    0 24px 48px -28px rgba(0, 0, 0, 0.8);
+}
+
+.btn:not(.alt):not(.white):not([disabled]),
+.btn:not(.alt):not(.white):not([disabled]):hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+/* How it works: a plain labelled sequence, no badges or dashed connector */
+.steps::before,
+.steps.four::before,
+html.js .steps.vis::before {
+  display: none;
+}
+
+.steps div::before {
+  content: "Step " counter(s);
+  display: block;
+  width: auto;
+  height: auto;
+  margin-bottom: 12px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--rose);
+  font: 600 0.85rem Onest, sans-serif;
+  letter-spacing: 0.01em;
+}
+
+.hcard h3.hc-top {
+  padding: 0 12px 16px;
+  font-size: 1.2rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero h1 {
+    animation: none;
+  }
+}
+
+/* ===== v21: Privacy Policy + Terms ===== */
+.legal .wrap {
+  max-width: 760px;
+}
+
+.legal .lg-upd {
+  margin: 6px 0 22px;
+  font-size: 0.9rem;
+}
+
+.legal .lead {
+  max-width: 68ch;
+}
+
+.legal .lg-toc {
+  margin: 28px 0 8px;
+  padding: 18px 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: var(--surf);
+}
+
+.legal .lg-toc ol {
+  margin: 0;
+  padding-left: 1.2em;
+  columns: 2;
+  column-gap: 32px;
+}
+
+.legal .lg-toc li {
+  margin: 4px 0;
+  break-inside: avoid;
+}
+
+.legal h2 {
+  margin: 44px 0 12px;
+  font-size: 1.45rem;
+  scroll-margin-top: 90px;
+}
+
+.legal p,
+.legal li {
+  max-width: 68ch;
+  color: #cfc6ca;
+  line-height: 1.65;
+}
+
+.legal ul {
+  padding-left: 1.2em;
+}
+
+.legal li {
+  margin: 8px 0;
+}
+
+.legal li b {
+  color: var(--ink);
+}
+
+.legal a {
+  color: var(--rose);
+  text-underline-offset: 3px;
+}
+
+.legal .lg-alt {
+  margin-top: 48px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lg-note {
+  margin: 14px 0 0;
+  font-size: 0.9rem;
+}
+
+.lg-note a,
+#sf .chk a {
+  color: var(--rose);
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 560px) {
+  .legal .lg-toc ol {
+    columns: 1;
+  }
+}
+
+/* ===== v22: "Why a university student?" icons =====
+   Bare line drawings in the accent colour: no tinted tile, no border, no glow. */
+.why-mark {
+  display: block;
+  width: 30px;
+  height: 30px;
+  color: var(--rose);
+}
+
+.why-mark svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.why-mark + h3 {
+  margin-top: 16px;
+}
