@@ -4022,3 +4022,12 @@ html.js .steps.vis::before {
 .note.pend b {
   color: #f3c46b;
 }
+
+/* ===== v24: booking sidebar uses the current white wordmark ===== */
+.side img {
+  display: block;
+  height: 26px;
+  width: auto;
+  filter: none;
+  mix-blend-mode: normal;
+}
