@@ -4004,3 +4004,21 @@ html.js .steps.vis::before {
 .why-mark + h3 {
   margin-top: 16px;
 }
+
+/* ===== v23: tutor approval ===== */
+.badge.pend {
+  white-space: nowrap;
+  background: rgba(240, 177, 60, 0.14);
+  color: #f3c46b;
+  box-shadow: inset 0 0 0 1px rgba(240, 177, 60, 0.3);
+}
+
+.note.pend {
+  border-color: rgba(240, 177, 60, 0.35);
+  background: rgba(240, 177, 60, 0.08);
+  color: #f1e3c4;
+}
+
+.note.pend b {
+  color: #f3c46b;
+}

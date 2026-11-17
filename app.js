@@ -642,7 +642,9 @@ async function loadSession() {
     };
     return;
   }
-  if (prof.data && prof.data.status === "active") {
+  // Pending tutors can log in to finish their profile while they wait for approval.
+  const st = prof.data?.status;
+  if (prof.data && (st === "active" || (st === "pending" && prof.data.role === "tutor"))) {
     DB.me = mapProfile(prof.data);
     return;
   }
@@ -1611,7 +1613,7 @@ function signup() {
       if (!data.session) {
         // Email confirmation is switched on in Supabase: they must click the link first.
         $("#sf").innerHTML =
-          `<h2>Check your email</h2><p>We sent a confirmation link to <b>${esc(em)}</b>. Click it, then <a href="#login">log in</a>.</p>${role === "tutor" ? '<p class="mut">After you log in, add your profile photo from your dashboard (Profile tab).</p>' : ""}`;
+          `<h2>Check your email</h2><p>We sent a confirmation link to <b>${esc(em)}</b>. Click it, then <a href="#login">log in</a>.</p>${role === "tutor" ? '<p class="mut">After you log in, add your profile photo from your dashboard (Profile tab). Cultivar+ reviews every new tutor, so your profile goes live once we approve it.</p>' : ""}`;
         return;
       }
       await loadSession();
@@ -2056,7 +2058,8 @@ function account() {
       ["profile", "Profile"],
       ["earn", "Earnings"],
     ];
-    body = `<div class="row between"><h1 class="h" style="margin:0">Hi, ${esc(m.name.split(" ")[0])}</h1><a class="btn alt sm" href="#tutor-${m.id}">View public profile</a></div><div class="tabs">${tabs.map(([k, l]) => `<button class="chip ${tab === k ? "sel" : ""}" data-t="${k}">${l}</button>`).join("")}</div><div id="tb"></div>`;
+    const pending = m.status === "pending";
+    body = `<div class="row between"><h1 class="h" style="margin:0">Hi, ${esc(m.name.split(" ")[0])}</h1>${pending ? "" : `<a class="btn alt sm" href="#tutor-${m.id}">View public profile</a>`}</div>${pending ? '<p class="note pend" role="status"><b>Your tutor account is waiting for approval.</b> Finish your profile and set your availability in the meantime. Students will be able to find and book you once Cultivar+ approves your account.</p>' : ""}<div class="tabs">${tabs.map(([k, l]) => `<button class="chip ${tab === k ? "sel" : ""}" data-t="${k}">${l}</button>`).join("")}</div><div id="tb"></div>`;
   }
   $("#app").innerHTML =
     `<section class="adm"><div class="wrap">${banner}${body}</div></section>`;
@@ -2256,12 +2259,15 @@ function admin() {
           (x) =>
             x.status === "confirmed" && (x.student === id || x.tutor === id),
         ).length;
-    el.innerHTML = `<div class="row" style="margin-bottom:14px"><select id="uf" style="width:auto" aria-label="Filter"><option value="">All accounts</option><option value="tutor">Tutors</option><option value="student">Students</option></select><button class="btn sm" id="at_">Add tutor</button><button class="btn alt sm" id="as_">Add student</button></div><div class="tbl" id="ut"></div><dialog id="dg"></dialog>`;
+    el.innerHTML = `<div class="row" style="margin-bottom:14px"><select id="uf" style="width:auto" aria-label="Filter"><option value="">All accounts</option><option value="pending">Awaiting approval</option><option value="tutor">Tutors</option><option value="student">Students</option></select><button class="btn sm" id="at_">Add tutor</button><button class="btn alt sm" id="as_">Add student</button></div><div class="tbl" id="ut"></div><dialog id="dg"></dialog>`;
     const draw = () => {
       const f = $("#uf").value,
-        r = U().filter((x) => !f || x.role === f);
+        waiting = U().filter((x) => x.status === "pending"),
+        r = U()
+          .filter((x) => !f || (f === "pending" ? x.status === "pending" : x.role === f))
+          .sort((a, b) => (b.status === "pending") - (a.status === "pending"));
       $("#ut").innerHTML =
-        `<table><tr><th>Name</th><th>Role</th><th>Email</th><th>Details</th><th>Upcoming</th><th>Status</th><th></th></tr>${r.map((x) => `<tr><td>${esc(x.name)}</td><td>${x.role}</td><td>${esc(x.email)}</td><td>${x.role === "tutor" ? esc(x.uni + ", " + x.program) + "<br><small>" + money(rateOf(x)) + "/hr</small>" : gl(x.grade)}</td><td>${cnt(x.id)}</td><td>${x.status === "suspended" ? '<span class="badge">Suspended</span>' : '<span class="badge ok">Active</span>'}</td><td class="act"><button class="btn alt sm" data-e="${x.id}">Edit</button><button class="btn alt sm" data-s="${x.id}">${x.status === "suspended" ? "Activate" : "Suspend"}</button><button class="btn alt sm" data-k="${x.id}">Reset password</button><button class="btn alt sm" data-r="${x.id}">Remove</button></td></tr>`).join("") || '<tr><td colspan="7">No accounts yet.</td></tr>'}</table>`;
+        `${waiting.length ? `<p class="note pend" role="status">${waiting.length} tutor${waiting.length > 1 ? "s are" : " is"} waiting for approval. Check their details, then press Approve.</p>` : ""}<table><tr><th>Name</th><th>Role</th><th>Email</th><th>Details</th><th>Upcoming</th><th>Status</th><th></th></tr>${r.map((x) => `<tr><td>${esc(x.name)}</td><td>${x.role}</td><td>${esc(x.email)}</td><td>${x.role === "tutor" ? esc(x.uni + ", " + x.program) + "<br><small>" + money(rateOf(x)) + "/hr</small>" : gl(x.grade)}</td><td>${cnt(x.id)}</td><td>${x.status === "pending" ? '<span class="badge pend">Awaiting approval</span>' : x.status === "suspended" ? '<span class="badge">Suspended</span>' : '<span class="badge ok">Active</span>'}</td><td class="act">${x.status === "pending" ? `<button class="btn sm" data-ap="${x.id}">Approve</button>` : ""}<button class="btn alt sm" data-e="${x.id}">Edit</button>${x.status === "pending" ? "" : `<button class="btn alt sm" data-s="${x.id}">${x.status === "suspended" ? "Activate" : "Suspend"}</button>`}<button class="btn alt sm" data-k="${x.id}">Reset password</button><button class="btn alt sm" data-r="${x.id}">Remove</button></td></tr>`).join("") || '<tr><td colspan="7">No accounts yet.</td></tr>'}</table>`;
       const run = async (fn) => {
         try {
           await fn();
@@ -2288,6 +2294,13 @@ function admin() {
               }),
             );
           }),
+      );
+      document.querySelectorAll("[data-ap]").forEach(
+        (b) =>
+          (b.onclick = () =>
+            run(() =>
+              adminFn("set_status", { id: b.dataset.ap, status: "active" }),
+            )),
       );
       document.querySelectorAll("[data-k]").forEach(
         (b) =>

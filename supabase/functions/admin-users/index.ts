@@ -128,6 +128,13 @@ Deno.serve(async (req) => {
           .update({ rate: Number(b.rate) })
           .eq("id", data.user.id);
       }
+      // New tutors start "pending"; one an admin creates is approved straight away.
+      if (role === "tutor") {
+        await admin
+          .from("profiles")
+          .update({ status: "active" })
+          .eq("id", data.user.id);
+      }
       return json(cors, { id: data.user.id });
     }
 
