@@ -3194,3 +3194,608 @@ html.js .q.rv.vis .qc {
     padding-top: 26px;
   }
 }
+
+/* =====================================================================
+   v17: Apple-style refinement (approved from the preview)
+   ---------------------------------------------------------------------
+   Same Crimson Noir identity, same content. What changes:
+   1. Materials   – a translucent, blurred nav bar instead of an opaque strip;
+                    cards get a lit top edge so they read as raised surfaces.
+   2. Typography  – size-specific tracking and leading; one heading scale.
+   3. Response    – every button and card reacts on press, instantly.
+   4. Motion      – one critically-damped curve for everything; smaller,
+                    calmer reveals; no sweeping shine or 3D tilt.
+   5. Rhythm      – one section spacing scale; panels share one radius.
+   6. Access      – reduced motion / transparency / more-contrast variants.
+   ===================================================================== */
+
+:root {
+  /* one motion curve (approximates a critically damped spring, ~0.4s response) */
+  --spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --press: cubic-bezier(0.3, 0, 0.2, 1);
+  --r-panel: 32px;
+  --r-card: 22px;
+  --edge: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --sec: clamp(72px, 9vw, 120px);
+}
+
+/* ---------- 1. Materials: translucent nav bar ---------- */
+header {
+  background: rgba(2, 6, 14, 0.62);
+  -webkit-backdrop-filter: blur(22px) saturate(170%);
+  backdrop-filter: blur(22px) saturate(170%);
+  border-bottom: 1px solid transparent;
+  transition:
+    background-color 0.35s var(--spring),
+    border-color 0.35s var(--spring),
+    box-shadow 0.35s var(--spring);
+}
+
+/* the divider only appears once content actually scrolls underneath */
+header.sc {
+  background: rgba(2, 6, 14, 0.74);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 12px 32px -18px rgba(0, 0, 0, 0.8);
+}
+
+header .wrap {
+  height: 68px;
+}
+
+/* nav links: quiet until hovered, crimson pill marks the current page */
+nav a.l {
+  border-radius: 999px;
+  transition:
+    color 0.2s var(--spring),
+    background-color 0.2s var(--spring);
+}
+
+nav a.l:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+nav a.l::after {
+  display: none;
+}
+
+/* ---------- 2. Typography ---------- */
+h1,
+h2 {
+  letter-spacing: -0.032em;
+  line-height: 1.02;
+  font-weight: 700;
+}
+
+h2 {
+  font-size: clamp(2.1rem, 3.8vw, 3.2rem);
+}
+
+h3 {
+  letter-spacing: -0.012em;
+  line-height: 1.2;
+}
+
+body {
+  letter-spacing: -0.003em;
+}
+
+/* small text gets a touch of positive tracking for legibility */
+.tag,
+.mut small,
+small,
+cite,
+.fnote,
+.fcopy {
+  letter-spacing: 0.01em;
+}
+
+p.mut.center {
+  font-size: 1.0625rem;
+  margin-inline: auto;
+}
+
+/* ---------- 3. Response: press feedback on every control ---------- */
+.btn {
+  min-height: 46px;
+  border-radius: 999px;
+  transition:
+    transform 0.4s var(--spring),
+    background-color 0.25s var(--spring),
+    box-shadow 0.3s var(--spring),
+    border-color 0.25s var(--spring);
+}
+
+.btn:not(.alt):not([disabled])::after {
+  display: none; /* retire the sweeping shine */
+}
+
+.btn:not(.alt):not(.white):not([disabled]) {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 8px 22px -10px rgba(197, 3, 55, 0.7);
+}
+
+.btn:not(.alt):not(.white):not([disabled]):hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 12px 30px -10px rgba(197, 3, 55, 0.85);
+}
+
+.btn.alt {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.btn.alt:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+/* pressed state lands immediately, releases on the spring */
+.btn:active:not([disabled]),
+.chip:active,
+nav a:active,
+summary:active {
+  transform: scale(0.965);
+  transition-duration: 0.09s;
+  transition-timing-function: var(--press);
+}
+
+/* ---------- 4. Cards: raised material, calm hover ---------- */
+.tc,
+.card {
+  border-radius: var(--r-card);
+  border-color: rgba(255, 255, 255, 0.07);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 40%),
+    var(--surf);
+  box-shadow:
+    var(--edge),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 18px 40px -24px rgba(0, 0, 0, 0.7);
+}
+
+/* no 3D tilt: a small lift that follows the pointer in and out on one curve */
+.tc,
+.tc:hover,
+.tc.tilting {
+  transform: translateY(var(--lift, 0px));
+  transition:
+    transform 0.5s var(--spring),
+    box-shadow 0.4s var(--spring),
+    border-color 0.3s var(--spring);
+}
+
+.tc:hover {
+  --lift: -4px;
+  border-color: rgba(197, 3, 55, 0.45);
+  box-shadow:
+    var(--edge),
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    0 28px 56px -26px rgba(120, 0, 30, 0.75);
+}
+
+.tc:active {
+  --lift: -1px;
+  transition-duration: 0.12s;
+}
+
+.tc:hover .av {
+  transform: scale(1.04);
+  border-radius: 50%;
+}
+
+.tag {
+  background: rgba(197, 3, 55, 0.12);
+  color: #ffb4c5;
+  box-shadow: inset 0 0 0 1px rgba(255, 106, 140, 0.16);
+}
+
+/* ---------- 5. Rhythm: one spacing scale, one panel radius ---------- */
+section {
+  padding-block: var(--sec);
+}
+
+.hero {
+  padding-bottom: clamp(56px, 7vw, 96px);
+}
+
+.about,
+.cta {
+  border-radius: var(--r-panel);
+  margin-inline: clamp(12px, 2vw, 24px);
+}
+
+.about {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 30%),
+    var(--surf);
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: var(--edge);
+}
+
+.unis {
+  box-shadow:
+    var(--edge),
+    0 30px 80px -40px rgba(197, 3, 55, 0.45);
+}
+
+/* "Who we are": long copy reads as a calm column with a hairline guide */
+#about .split > :last-child {
+  border-left: 1px solid rgba(255, 255, 255, 0.07);
+  padding-left: clamp(24px, 3vw, 44px);
+}
+
+#about .split > :last-child p {
+  color: #cfc6ca;
+}
+
+#about .split > :last-child h3 {
+  color: var(--ink);
+  margin-top: 36px !important;
+}
+
+/* ---------- FAQ: smooth disclosure that can be reversed mid-motion ---------- */
+:root {
+  interpolate-size: allow-keywords;
+}
+
+details {
+  padding: 0;
+}
+
+summary {
+  padding: 22px 4px;
+  border-radius: 12px;
+  transition:
+    color 0.2s var(--spring),
+    transform 0.4s var(--spring);
+}
+
+summary::after {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 50%;
+  background: rgba(197, 3, 55, 0.12);
+  font-size: 1.25rem;
+  transition:
+    transform 0.45s var(--spring),
+    background-color 0.25s var(--spring);
+}
+
+details[open] summary::after {
+  transform: rotate(135deg);
+  background: rgba(197, 3, 55, 0.24);
+}
+
+details::details-content {
+  block-size: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition:
+    block-size 0.45s var(--spring),
+    opacity 0.3s var(--spring),
+    content-visibility 0.45s allow-discrete;
+}
+
+details[open]::details-content {
+  block-size: auto;
+  opacity: 1;
+}
+
+details p {
+  margin: 0 4px 22px;
+  animation: none;
+}
+
+/* ---------- Reveal on scroll: shorter travel, one curve ---------- */
+html.js .rv {
+  translate: 0 14px;
+}
+
+html.js .rv.vis {
+  transition:
+    opacity 0.6s var(--spring) var(--d, 0ms),
+    translate 0.7s var(--spring) var(--d, 0ms);
+}
+
+/* ---------- Footer ---------- */
+footer {
+  border-top-color: rgba(255, 255, 255, 0.06);
+}
+
+/* ---------- 6. Accessibility variants ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .tc,
+  .tc:hover,
+  .btn,
+  summary,
+  summary::after {
+    transition-property: opacity, color, background-color, border-color;
+    transform: none !important;
+  }
+
+  html.js .rv {
+    translate: none;
+  }
+
+  details::details-content {
+    transition: opacity 0.2s ease, content-visibility 0.2s allow-discrete;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  header,
+  header.sc {
+    background: var(--noir);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  header {
+    background: var(--noir);
+    border-bottom-color: var(--line2);
+  }
+
+  .tc,
+  .card,
+  .about {
+    border-color: var(--line2);
+  }
+
+  .mut,
+  p.mut {
+    color: #cdc4c8;
+  }
+}
+
+/* nav logo: a transparent white cut (blend modes can't see through backdrop blur) */
+header img {
+  filter: none;
+  mix-blend-mode: normal;
+}
+
+/* ===== v18: subject cards + "Why a university student?" =====
+   The invented testimonials are gone. "What we help with" becomes four cards whose
+   rows open the tutor list filtered to that subject, with a live tutor count. */
+.why-ic {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 14px;
+  background: rgba(197, 3, 55, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(255, 106, 140, 0.18);
+  color: var(--rose);
+}
+
+.why-ic svg,
+.hl-meta svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* --- subject cards --- */
+.help {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  border-top: 0;
+  margin-top: 48px;
+}
+
+.help > div.hcard {
+  display: flex;
+  flex-direction: column;
+  padding: 22px 10px 12px;
+  border-radius: var(--r-card, 22px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 40%),
+    var(--surf);
+  box-shadow:
+    var(--edge, inset 0 1px 0 rgba(255, 255, 255, 0.06)),
+    0 18px 40px -24px rgba(0, 0, 0, 0.7);
+}
+
+.hcard .hc-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 12px 16px;
+}
+
+.hcard h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.hcard .hc-note {
+  margin: -6px 12px 10px;
+  font-size: 0.9rem;
+  color: var(--mut);
+}
+
+.help .hcard ul {
+  margin-top: auto;
+}
+
+.help .hcard li {
+  padding: 0;
+  border: 0;
+  font-weight: 500;
+}
+
+.help .hcard li + li {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.hl-link,
+.beyond .hl-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.hl-link {
+  transition:
+    background-color 0.2s var(--spring, ease),
+    transform 0.4s var(--spring, ease);
+}
+
+.hl-link:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.hl-link:active {
+  transform: scale(0.98);
+  transition-duration: 0.09s;
+}
+
+.hl-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
+  color: var(--mut);
+}
+
+.hl-meta svg {
+  width: 18px;
+  height: 18px;
+  color: var(--line2);
+  transition:
+    transform 0.4s var(--spring, ease),
+    color 0.2s;
+}
+
+.hl-link:hover .hl-meta svg {
+  transform: translateX(3px);
+  color: var(--rose);
+}
+
+/* "Beyond the classroom": every tutor offers it, so it's a crimson-lit card, not a filter */
+.help > div.hcard.beyond {
+  border-color: rgba(197, 3, 55, 0.35);
+  background:
+    linear-gradient(160deg, rgba(197, 3, 55, 0.2), rgba(111, 34, 50, 0.08) 45%, transparent 80%),
+    var(--surf);
+}
+
+.beyond .hl-name::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--red);
+  flex: none;
+}
+
+/* --- Why a university student? --- */
+.why-head {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  align-items: end;
+}
+
+.why-head h2 {
+  margin: 0;
+}
+
+.why-head p {
+  margin: 0 0 0.35em;
+  font-size: 1.125rem;
+  justify-self: end;
+  max-width: 30ch;
+}
+
+.why-list {
+  list-style: none;
+  margin: 48px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.why-list li {
+  padding: 36px 36px 8px 0;
+}
+
+.why-list li + li {
+  padding-left: 36px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.why-list h3 {
+  margin: 22px 0 10px;
+  font-size: clamp(1.3rem, 1.9vw, 1.55rem);
+  letter-spacing: -0.018em;
+  text-wrap: balance;
+}
+
+.why-list p {
+  margin: 0;
+  color: var(--mut);
+  text-wrap: pretty;
+}
+
+@media (max-width: 1000px) {
+  .help {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .why-head {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .why-head p {
+    justify-self: start;
+  }
+  .why-list {
+    grid-template-columns: 1fr;
+  }
+  .why-list li,
+  .why-list li + li {
+    padding: 28px 0;
+    border-left: 0;
+  }
+  .why-list li + li {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+}
+
+@media (max-width: 560px) {
+  .help {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hl-link,
+  .hl-meta svg {
+    transition: background-color 0.2s, color 0.2s;
+    transform: none !important;
+  }
+}

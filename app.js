@@ -241,16 +241,22 @@ const C = {
       ],
     ],
   ],
-  quotes: [
+  why: [
     [
-      "My tutor had just taken the same calculus course, and it showed.",
-      "Student, Grade 12",
+      "They just took your course.",
+      "Your tutor sat the same senior courses recently, so the material, and the parts that trip people up, are still fresh.",
+      "book",
     ],
     [
-      "She explained how she picked her program, and it calmed me down.",
-      "Student, Grade 11",
+      "They’ve made the jump you’re about to.",
+      "Applications, choosing a program, first year: ask someone who just went through it.",
+      "path",
     ],
-    ["Booking and paying took two minutes.", "Parent, Grade 10"],
+    [
+      "You choose who you learn with.",
+      "Pick by subject, university, program, personality or interests, not whoever happens to be free.",
+      "person",
+    ],
   ],
   faq: [
     [
@@ -863,7 +869,7 @@ function pick(id) {
 function fx() {
   const els = [
     ...document.querySelectorAll(
-      "#app .about .split>*,#app .tc,#app .band,#app .q,#app .steps,#app .steps>div,#app details,#app .help>div,#app .cta .wrap>*,#app section>.wrap>h2",
+      "#app .about .split>*,#app .tc,#app .band,#app .q,#app .steps,#app .steps>div,#app details,#app .help>div,#app .why-list>li,#app .cta .wrap>*,#app section>.wrap>h2",
     ),
   ];
   els.forEach((e) => {
@@ -1037,6 +1043,36 @@ document.addEventListener("click", (e) => {
   }
 });
 // ===== HOME =====
+// ---- "What we help with" cards + "Why a university student" icons ----
+const HELP_SUBJ = { "Other high school subjects": "Other subjects" };
+let pendingSubj = null; // set by a subject link, read once by tutors()
+const ICON = {
+  book: '<svg viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"/></svg>',
+  path: '<svg viewBox="0 0 24 24"><path d="M5 19 19 5"/><path d="M9 5h10v10"/></svg>',
+  person: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5"/></svg>',
+  math: '<svg viewBox="0 0 24 24"><path d="M5 7h6M8 4v6M14 7h5M5 17l5-5M10 17l-5-5M14 15h5M14 19h5"/></svg>',
+  sci: '<svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3"/><path d="M7.5 15h9"/></svg>',
+  pen: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/></svg>',
+  cap: '<svg viewBox="0 0 24 24"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c2 2 10 2 12 0v-5"/></svg>',
+};
+const HELP_ICON = ["math", "sci", "pen", "cap"];
+document.addEventListener("click", (e) => {
+  const a = e.target.closest?.("[data-subj]");
+  if (a) pendingSubj = a.dataset.subj;
+});
+// The last group ("Beyond the classroom") is something every tutor offers, so it isn't a filter.
+function helpCard(h, items, gi, T) {
+  const beyond = gi === C.help.length - 1;
+  const rows = items
+    .map((i) => {
+      if (beyond) return `<li><span class="hl-name">${i}</span></li>`;
+      const subj = HELP_SUBJ[i] || i,
+        n = T.filter((t) => t.subjects.includes(subj)).length;
+      return `<li><a class="hl-link" href="#tutors" data-subj="${esc(subj)}"><span class="hl-name">${i}</span><span class="hl-meta">${n ? `${n} tutor${n > 1 ? "s" : ""}` : ""}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></a></li>`;
+    })
+    .join("");
+  return `<div class="hcard${beyond ? " beyond" : ""}"><div class="hc-top"><span class="why-ic" aria-hidden="true">${ICON[HELP_ICON[gi] || "book"]}</span><h3>${h}</h3></div>${beyond ? '<p class="hc-note">Ask any tutor. It comes with every session.</p>' : ""}<ul>${rows}</ul></div>`;
+}
 function home() {
   track("page_home");
   const T = allTutors();
@@ -1049,13 +1085,8 @@ function home() {
     )}</h1><p class="sub">${C.sub}</p><div class="row"><a class="btn" href="#tutors">Meet our tutors</a><a class="btn alt" href="#book" data-track="book">Book a Session</a></div><p class="hnote">${C.note.map((n, i, a) => `<span class="hn-item${i ? "" : " hn-price"}">${n}${i < a.length - 1 ? `<span class="sep" aria-hidden="true">·</span>` : ""}</span>`).join(" ")}</p><p class="intro">${C.intro}</p></div><div class="uwrap"><aside class="unis" aria-labelledby="uh"><div class="uhd"><h2 id="uh">Where our tutors study</h2><p>Across Ontario, from London to Ottawa.</p></div><ul class="logos" aria-label="Universities">${C.unis.map(([n, c, sl], i) => `<li style="--i:${i}" title="${n}, ${c}"><span class="ulogo"><img class="m" src="assets/unis/mono/${sl}.png" alt="${n}" decoding="async" onload="logoFit(this)" onerror="this.closest('li').classList.add('nologo');this.parentNode.remove()"><img class="c" src="assets/unis/${sl}.png" alt="" aria-hidden="true" decoding="async" loading="lazy"></span><span class="ln">${n}<small>${c}</small></span></li>`).join("")}</ul></aside></div></div></section>
 <section id="tutors-sec"><div class="wrap"><h2 class="center">Choose a mentor, not just a tutor</h2><p class="mut center">Pick by subject, university, program or personality. Every tutor is a real university student.</p><div class="tg" style="margin-top:36px">${T.length ? T.slice(0, 6).map(tcard).join("") : '<p class="mut center">New tutors are joining soon.</p>'}</div><p class="center" style="margin-top:32px"><a class="btn alt" href="#tutors">Browse all tutors</a></p></div></section>
 <section class="about"><div class="wrap"><h2>How it works</h2><div class="steps four"><div><h3>Browse tutors</h3><p class="mut">Filter by subject, university and interests.</p></div><div><h3>Read a profile</h3><p class="mut">Meet the person behind the subject.</p></div><div><h3>Book a time</h3><p class="mut">See live availability and pick a slot.</p></div><div><h3>Pay and learn</h3><p class="mut">Pay by card after booking, then meet online.</p></div></div></div></section>
-<section><div class="wrap"><h2 class="center">What we help with</h2><p class="mut center">Senior-level courses, plus the things school doesn’t always teach.</p><div class="help">${C.help.map(([h, items]) => `<div><h3>${h}</h3><ul>${items.map((i) => `<li>${i}</li>`).join("")}</ul></div>`).join("")}</div></div></section>
-<section class="voices"><div class="wrap"><h2>What students say</h2><div class="qg">${C.quotes
-    .map((q, i) => {
-      const [who, ...rest] = q[1].split(", ");
-      return `<figure class="q${i ? "" : " lead"}"><blockquote><span class="qo" aria-hidden="true">“</span>${q[0]}<span class="qc" aria-hidden="true">”</span></blockquote><figcaption><b>${who}</b>${rest.length ? `<span>${rest.join(", ")}</span>` : ""}</figcaption></figure>`;
-    })
-    .join("")}</div></div></section>
+<section class="helpsec"><div class="wrap"><h2 class="center">What we help with</h2><p class="mut center">Senior-level courses, plus the things school doesn’t always teach. Pick a subject to see who teaches it.</p><div class="help">${C.help.map(([h, items], gi) => helpCard(h, items, gi, T)).join("")}</div></div></section>
+<section class="why"><div class="wrap"><div class="why-head"><h2>Why a university student?</h2><p class="mut">The person helping you was in your seat not long ago.</p></div><ul class="why-list">${C.why.map(([h, p, ic]) => `<li><span class="why-ic" aria-hidden="true">${ICON[ic]}</span><h3>${h}</h3><p>${p}</p></li>`).join("")}</ul></div></section>
 <section id="about" class="about"><div class="wrap split"><div><h2>Who we are</h2><div class="tags" style="margin-top:18px">${C.words.map((w) => `<span class="tag">${w}</span>`).join("")}</div></div><div>${C.overview.map((p) => `<p>${p}</p>`).join("")}<h3 style="margin-top:28px">Our mission</h3>${C.mission.map((p) => `<p>${p}</p>`).join("")}</div></div></section>
 <section id="faq"><div class="wrap split"><h2>Questions, answered</h2><div>${C.faq.map((f) => `<details><summary>${f[0]}</summary><p>${f[1]}</p></details>`).join("")}</div></div></section>
 <section class="cta" id="contact"><div class="wrap"><div><h2>Ready to grow?</h2><p>Find the tutor who feels right and book in minutes.</p><div class="row"><a class="btn white" href="#tutors">Find a tutor</a></div><p style="margin-top:24px">${C.email}<br>${C.phone}</p></div>
@@ -1119,6 +1150,10 @@ function tutors() {
     fx();
   };
   ["q", "fs", "fu"].forEach((i) => ($("#" + i).oninput = draw));
+  if (pendingSubj) {
+    $("#fs").value = pendingSubj;
+    pendingSubj = null;
+  }
   draw();
 }
 function profile() {
