@@ -117,7 +117,9 @@ async function avatarBlob(file) {
     h0 = img.naturalHeight;
   if (!w0 || !h0)
     throw new Error("We couldn't read that image. Try a JPG or PNG.");
-  const sc = Math.min(1, 640 / Math.max(w0, h0)),
+  // Photos show at 120px at most, so 480px stays sharp on 3x+ screens while using less
+  // Supabase Storage and bandwidth than the old 640px.
+  const sc = Math.min(1, 480 / Math.max(w0, h0)),
     c = document.createElement("canvas");
   c.width = Math.max(1, Math.round(w0 * sc));
   c.height = Math.max(1, Math.round(h0 * sc));
@@ -141,7 +143,9 @@ async function uploadTutorPhoto(file, userId) {
       path = `${userId}/avatar.jpg`;
     const { error } = await sb.storage.from("avatars").upload(path, blob, {
       upsert: true,
-      cacheControl: "3600",
+      // Every upload gets a new ?v= URL, so browsers and the CDN can keep a copy for a year
+      // instead of re-downloading the photo from Storage every hour.
+      cacheControl: "31536000",
       contentType: "image/jpeg",
     });
     if (error) throw error;
@@ -485,22 +489,6 @@ document.addEventListener("focusout", (e) => {
 // Everything lives in Supabase. The rest of the app still reads through the small
 // synchronous helpers below (U, B, S, me, allTutors...), which are backed by this
 // in-memory cache that the load*() functions refill from the database.
-const DA = {
-  1: [16, 20],
-  2: [16, 20],
-  3: [16, 20],
-  4: [16, 20],
-  5: [16, 20],
-  6: [10, 16],
-};
-const SEED = [].map((t) => ({
-  role: "tutor",
-  seed: 1,
-  photo: "",
-  avail: DA,
-  blocked: [],
-  ...t,
-}));
 const DB = {
   me: null, // logged-in user ({role:'student'|'tutor'|'admin', ...}) or null
   issue: "", // why login didn't complete: suspended / noprofile / network
@@ -517,8 +505,9 @@ const DB = {
 const FRESH = { pub: 0, mine: 0, adm: 0 };
 const U = () => DB.users,
   B = () => DB.bookings;
-const allTutors = () => [...SEED, ...DB.tutors],
-  tut = (id) => allTutors().find((t) => t.id === id);
+// Callers only read this list, so hand back the cached array instead of copying it.
+const allTutors = () => DB.tutors,
+  tut = (id) => DB.tutors.find((t) => t.id === id);
 const me = () => DB.me;
 const DEF = {
   rate: 40,
@@ -742,9 +731,14 @@ async function adminFn(action, payload = {}) {
   return data;
 }
 // time helpers
-function offs(ms, tz) {
-  const p = Object.fromEntries(
-    new Intl.DateTimeFormat("en-US", {
+// Building an Intl formatter is far slower than using one, and the calendar used to build
+// hundreds per render. Keep one per time zone / option set and reuse it.
+const OFFS_F = new Map(),
+  FMT_F = new Map();
+const offsFmt = (tz) => {
+  let f = OFFS_F.get(tz);
+  if (!f) {
+    f = new Intl.DateTimeFormat("en-US", {
       timeZone: tz,
       hourCycle: "h23",
       year: "numeric",
@@ -753,10 +747,14 @@ function offs(ms, tz) {
       hour: "numeric",
       minute: "numeric",
       second: "numeric",
-    })
-      .formatToParts(ms)
-      .map((x) => [x.type, x.value]),
-  );
+    });
+    OFFS_F.set(tz, f);
+  }
+  return f;
+};
+function offs(ms, tz) {
+  const p = {};
+  for (const x of offsFmt(tz).formatToParts(ms)) p[x.type] = x.value;
   return (
     Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) -
     Math.floor(ms / 1000) * 1000
@@ -768,19 +766,27 @@ function zoned(y, m, d, h, mi, tz) {
   t = g - offs(t, tz);
   return t;
 }
-const fmt = (ms, tz, o) =>
-    new Intl.DateTimeFormat("en-CA", { timeZone: tz, ...o }).format(ms),
+const fmt = (ms, tz, o) => {
+    const k = tz + "|" + JSON.stringify(o);
+    let f = FMT_F.get(k);
+    if (!f) {
+      f = new Intl.DateTimeFormat("en-CA", { timeZone: tz, ...o });
+      FMT_F.set(k, f);
+    }
+    return f.format(ms);
+  },
   dkey = (ms, tz) =>
     fmt(ms, tz, { year: "numeric", month: "2-digit", day: "2-digit" }),
   tm = (ms, tz) =>
     fmt(ms, tz, { hour: "numeric", minute: "2-digit", hour12: true })
       .replace(/\./g, "")
       .toUpperCase();
+let MONEY_F;
 const money = (n) =>
-    new Intl.NumberFormat("en-CA", {
+    (MONEY_F ??= new Intl.NumberFormat("en-CA", {
       style: "currency",
       currency: CFG.currency,
-    }).format(n),
+    })).format(n),
   rateOf = (t) => t.rate ?? S().rate,
   price = (t, b) => rateOf(t) * (b ? (b.end - b.start) / 36e5 : S().len / 60);
 const DOW = [
@@ -798,14 +804,15 @@ function slotsFor(t) {
     now = Date.now(),
     out = [],
     t0 = new Date(),
-    bk = DB.busy.filter((b) => b.tutor === t.id);
+    bk = DB.busy.filter((b) => b.tutor === t.id),
+    off = new Set(t.blocked || []);
   for (let i = 0; i <= s.window + 1; i++) {
     const dt = new Date(
         Date.UTC(t0.getUTCFullYear(), t0.getUTCMonth(), t0.getUTCDate() + i),
       ),
       h = t.avail?.[dt.getUTCDay()];
     if (!h) continue;
-    if ((t.blocked || []).includes(dt.toISOString().slice(0, 10))) continue;
+    if (off.has(dt.toISOString().slice(0, 10))) continue;
     for (let m = h[0] * 60; m + s.len <= h[1] * 60; m += s.len) {
       const st = zoned(
           dt.getUTCFullYear(),
@@ -933,31 +940,37 @@ function pick(id) {
     ref: null,
   });
 }
+// One shared observer for the reveal animation. go() disconnects it on every page change,
+// so elements from the previous page (which never scroll into view) aren't kept alive.
+let revealIO = null;
+const getRevealIO = () =>
+  (revealIO ??= new IntersectionObserver(
+    (es) =>
+      es.forEach((x) => {
+        if (x.isIntersecting) {
+          x.target.classList.add("vis");
+          revealIO.unobserve(x.target);
+        }
+      }),
+    { threshold: 0.05, rootMargin: "0px 0px -2% 0px" },
+  ));
 function fx() {
+  // Only new elements: the tutor filter calls this on every keystroke.
   const els = [
     ...document.querySelectorAll(
       "#app .about .split>*,#app .tc,#app .band,#app .q,#app .steps,#app .steps>div,#app details,#app .help>div,#app .why-list>li,#app .cta .wrap>*,#app section>.wrap>h2",
     ),
-  ];
+  ].filter((e) => !e.classList.contains("rv"));
   els.forEach((e) => {
     e.classList.add("rv");
     const p = e.parentElement,
-      i = [...p.children].indexOf(e);
+      i = Array.prototype.indexOf.call(p.children, e);
     e.style.setProperty("--d", Math.min(i + 1, 4) * 40 + "ms");
   });
   if (!("IntersectionObserver" in window)) {
     els.forEach((e) => e.classList.add("vis"));
   } else {
-    const io = new IntersectionObserver(
-      (es) =>
-        es.forEach((x) => {
-          if (x.isIntersecting) {
-            x.target.classList.add("vis");
-            io.unobserve(x.target);
-          }
-        }),
-      { threshold: 0.05, rootMargin: "0px 0px -2% 0px" },
-    );
+    const io = getRevealIO();
     els.forEach((e) => io.observe(e));
   }
 
@@ -965,7 +978,8 @@ function fx() {
     matchMedia("(hover:hover)").matches &&
     !matchMedia("(prefers-reduced-motion:reduce)").matches
   ) {
-    document.querySelectorAll(".tc").forEach((c) => {
+    els.forEach((c) => {
+      if (!c.classList.contains("tc")) return;
       let ticking = false,
         px = 0,
         py = 0;
@@ -1021,21 +1035,29 @@ function after() {
   const m = me();
   location.hash = n || (m.role === "admin" ? "admin" : "account");
 }
+// Quick back-to-back navigations reuse a refresh that's already running instead of
+// sending the same queries to Supabase again. (Only used for these freshness checks;
+// reloads after a save always start a new request.)
+const INFLIGHT = {};
+const shared = (k, fn) =>
+  (INFLIGHT[k] ??= fn().finally(() => {
+    INFLIGHT[k] = null;
+  }));
 // Refresh data from the database when it's stale, so people always see current availability.
 async function ensure(r) {
   const now = Date.now(),
     jobs = [],
     maxAge =
       { book: 3000, profile: 5000, account: 3000, admin: 3000 }[r] ?? 30000;
-  if (now - FRESH.pub > maxAge) jobs.push(loadPublic());
+  if (now - FRESH.pub > maxAge) jobs.push(shared("pub", loadPublic));
   if (
     DB.me &&
     ["account", "admin", "book", "paid"].includes(r) &&
     now - FRESH.mine > 3000
   )
-    jobs.push(loadMine());
+    jobs.push(shared("mine", loadMine));
   if (DB.me?.role === "admin" && r === "admin" && now - FRESH.adm > 3000)
-    jobs.push(loadAdmin());
+    jobs.push(shared("adm", loadAdmin));
   if (jobs.length) await Promise.all(jobs);
 }
 async function go() {
@@ -1078,6 +1100,9 @@ async function go() {
       fe.href = "mailto:" + C.email;
     }
   }
+  // Drop observers pointing at the page we're about to replace (they'd keep it in memory).
+  revealIO?.disconnect();
+  logoRO.disconnect();
   R[r]();
   {
     const a = $("#app");
@@ -1721,6 +1746,21 @@ function s1() {
     step();
   };
 }
+// The time zone list has ~400 entries and the calendar re-renders on every click,
+// so build the <option> list once per selected zone.
+let TZ_LIST, TZ_OPTS;
+function tzOptions(tz) {
+  if (TZ_OPTS?.tz === tz) return TZ_OPTS.html;
+  TZ_LIST ??= Intl.supportedValuesOf ? Intl.supportedValuesOf("timeZone") : [];
+  const zs = TZ_LIST.includes(tz) ? TZ_LIST : [tz, ...TZ_LIST];
+  TZ_OPTS = {
+    tz,
+    html: zs
+      .map((z) => `<option ${z === tz ? "selected" : ""}>${z}</option>`)
+      .join(""),
+  };
+  return TZ_OPTS.html;
+}
 function s2() {
   const t = tut(st.tutor),
     a = slotsFor(t),
@@ -1750,12 +1790,8 @@ function s2() {
       v = !!by[k];
     c += `<button class="d ${v ? "ya" : ""} ${k === st.day ? "sel" : ""} ${k === today ? "today" : ""}" data-d="${k}" ${v ? "" : "disabled"} aria-label="${k}${v ? ", available" : ", unavailable"}">${d}</button>`;
   }
-  const zs = Intl.supportedValuesOf
-    ? Intl.supportedValuesOf("timeZone")
-    : [st.tz];
-  if (!zs.includes(st.tz)) zs.unshift(st.tz);
   $("#bs").innerHTML =
-    `<h2>Pick a date and time</h2><div class="cal ${st.day ? "" : "one"}"><div><div class="mh"><button id="pm" aria-label="Previous month" ${st.month > mk[0] ? "" : "disabled"}>‹</button><b>${new Date(Date.UTC(Y, M - 1, 1)).toLocaleDateString("en-US", { timeZone: "UTC", month: "long", year: "numeric" })}</b><button id="nm2" aria-label="Next month" ${st.month < mk[mk.length - 1] ? "" : "disabled"}>›</button></div><div class="dg">${["S", "M", "T", "W", "T", "F", "S"].map((x) => `<b aria-hidden="true">${x}</b>`).join("")}${c}</div><div class="tz"><label for="tzs" style="display:inline;margin-right:6px">Time zone</label><select id="tzs">${zs.map((z) => `<option ${z === st.tz ? "selected" : ""}>${z}</option>`).join("")}</select></div></div>${st.day ? `<div><h3>${new Date(st.day + "T12:00:00Z").toLocaleDateString("en-US", { timeZone: "UTC", weekday: "long", month: "short", day: "numeric" })}</h3><div class="slots ${anim ? "stag" : ""}" role="group" aria-label="Times">${by[st.day].map((ms, i) => `<button class="chip ${ms === st.slot ? "sel" : ""}" style="--i:${i}" data-s="${ms}" aria-pressed="${ms === st.slot}">${tm(ms, st.tz)}</button>`).join("")}</div></div>` : ""}</div><div class="nav2"><button class="btn alt" id="bk">Back</button><button class="btn" id="nx" ${st.slot ? "" : "disabled"}>Next</button></div>`;
+    `<h2>Pick a date and time</h2><div class="cal ${st.day ? "" : "one"}"><div><div class="mh"><button id="pm" aria-label="Previous month" ${st.month > mk[0] ? "" : "disabled"}>‹</button><b>${new Date(Date.UTC(Y, M - 1, 1)).toLocaleDateString("en-US", { timeZone: "UTC", month: "long", year: "numeric" })}</b><button id="nm2" aria-label="Next month" ${st.month < mk[mk.length - 1] ? "" : "disabled"}>›</button></div><div class="dg">${["S", "M", "T", "W", "T", "F", "S"].map((x) => `<b aria-hidden="true">${x}</b>`).join("")}${c}</div><div class="tz"><label for="tzs" style="display:inline;margin-right:6px">Time zone</label><select id="tzs">${tzOptions(st.tz)}</select></div></div>${st.day ? `<div><h3>${new Date(st.day + "T12:00:00Z").toLocaleDateString("en-US", { timeZone: "UTC", weekday: "long", month: "short", day: "numeric" })}</h3><div class="slots ${anim ? "stag" : ""}" role="group" aria-label="Times">${by[st.day].map((ms, i) => `<button class="chip ${ms === st.slot ? "sel" : ""}" style="--i:${i}" data-s="${ms}" aria-pressed="${ms === st.slot}">${tm(ms, st.tz)}</button>`).join("")}</div></div>` : ""}</div><div class="nav2"><button class="btn alt" id="bk">Back</button><button class="btn" id="nx" ${st.slot ? "" : "disabled"}>Next</button></div>`;
   $("#pm").onclick = () => {
     st.month = new Date(Date.UTC(Y, M - 2, 1)).toISOString().slice(0, 7);
     s2();
@@ -2492,11 +2528,19 @@ function admin() {
     };
   }
 }
-addEventListener(
-  "scroll",
-  () => $("header").classList.toggle("sc", scrollY > 8),
-  { passive: true },
-);
+{
+  // Only touch the DOM when the state actually flips, not on every scroll event.
+  const hdr = $("header");
+  let sc = null;
+  addEventListener(
+    "scroll",
+    () => {
+      const v = scrollY > 8;
+      if (v !== sc) hdr.classList.toggle("sc", (sc = v));
+    },
+    { passive: true },
+  );
+}
 (async function init() {
   // Remove the old browser-only data. It held password hashes and test records,
   // and the real data now lives in Supabase.

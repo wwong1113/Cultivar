@@ -30,8 +30,9 @@ function json(headers: Record<string, string>, body: unknown, status = 200) {
   });
 }
 
-/** Service-role client: bypasses RLS. Never expose this key to the browser. */
-const adminClient = () =>
+/** Service-role client: bypasses RLS. Never expose this key to the browser.
+ *  Created once per warm instance and reused, instead of rebuilt on every request. */
+const makeAdminClient = () =>
   createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -39,6 +40,8 @@ const adminClient = () =>
       auth: { persistSession: false, autoRefreshToken: false },
     },
   );
+let ADMIN: ReturnType<typeof makeAdminClient> | null = null;
+const adminClient = () => (ADMIN ??= makeAdminClient());
 
 /** Verify the caller's access token and return their user (or null). */
 async function getCaller(req: Request, admin = adminClient()) {
@@ -117,23 +120,13 @@ Deno.serve(async (req) => {
         },
       });
       if (error) return json(cors, { error: error.message }, 400);
-      if (
-        role === "tutor" &&
-        b.rate !== undefined &&
-        b.rate !== null &&
-        b.rate !== ""
-      ) {
-        await admin
-          .from("profiles")
-          .update({ rate: Number(b.rate) })
-          .eq("id", data.user.id);
-      }
       // New tutors start "pending"; one an admin creates is approved straight away.
+      // The rate override (if any) goes in the same write, so it's one database call.
       if (role === "tutor") {
-        await admin
-          .from("profiles")
-          .update({ status: "active" })
-          .eq("id", data.user.id);
+        const patch: Record<string, unknown> = { status: "active" };
+        if (b.rate !== undefined && b.rate !== null && b.rate !== "")
+          patch.rate = Number(b.rate);
+        await admin.from("profiles").update(patch).eq("id", data.user.id);
       }
       return json(cors, { id: data.user.id });
     }

@@ -4031,3 +4031,24 @@ html.js .steps.vis::before {
   filter: none;
   mix-blend-mode: normal;
 }
+
+/* ===== v25: "What we help with" cards fill evenly =====
+   Long names ("Grade 9–10 Mathematics") wrap in a quarter-width card, so Math is taller
+   than the others. The cards all stretch to the same height, and the old
+   "margin-top: auto" pushed the shorter cards' lists to the bottom, leaving a gap under
+   their headings. Now each list starts right under its heading and its rows share any
+   spare height evenly, so no card has an empty patch. */
+.help .hcard ul {
+  margin-top: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.help .hcard li {
+  flex: auto;
+  display: flex;
+}
+.help .hcard .hl-link,
+.help .hcard.beyond .hl-name {
+  flex: 1;
+}

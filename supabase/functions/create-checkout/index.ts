@@ -34,8 +34,9 @@ function json(headers: Record<string, string>, body: unknown, status = 200) {
   });
 }
 
-/** Service-role client: bypasses RLS. Never expose this key to the browser. */
-const adminClient = () =>
+/** Service-role client: bypasses RLS. Never expose this key to the browser.
+ *  Created once per warm instance and reused, instead of rebuilt on every request. */
+const makeAdminClient = () =>
   createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -43,6 +44,8 @@ const adminClient = () =>
       auth: { persistSession: false, autoRefreshToken: false },
     },
   );
+let ADMIN: ReturnType<typeof makeAdminClient> | null = null;
+const adminClient = () => (ADMIN ??= makeAdminClient());
 
 /** Verify the caller's access token and return their user (or null). */
 async function getCaller(req: Request, admin = adminClient()) {
@@ -116,6 +119,9 @@ async function notifyBooking(admin: any, bookingId: string): Promise<boolean> {
     .eq("id", bookingId)
     .maybeSingle();
   if (!b || b.paid !== "paid") return true;
+  // Both emails already went out (e.g. Stripe retried the webhook, or the person reloaded
+  // the payment page): nothing to do, so skip the extra query and the Gmail connection.
+  if (b.tutor_emailed_at && b.student_emailed_at) return true;
 
   let tutorEmail = "";
   if (b.tutor_id) {
@@ -206,14 +212,17 @@ async function notifyBooking(admin: any, bookingId: string): Promise<boolean> {
       .update({ [col]: null })
       .eq("id", b.id);
 
-  const client = new SMTPClient({
-    connection: {
-      hostname: "smtp.gmail.com",
-      port: 465,
-      tls: true,
-      auth: { username: user, password: pass },
-    },
-  });
+  // Connect to Gmail only once an email has actually been claimed for sending.
+  let client: SMTPClient | null = null;
+  const smtp = () =>
+    (client ??= new SMTPClient({
+      connection: {
+        hostname: "smtp.gmail.com",
+        port: 465,
+        tls: true,
+        auth: { username: user, password: pass },
+      },
+    }));
   let allOk = true;
   const send = async (
     col: string,
@@ -224,7 +233,7 @@ async function notifyBooking(admin: any, bookingId: string): Promise<boolean> {
   ) => {
     if (!to || !(await claim(col))) return; // nothing to send, or already sent
     try {
-      await client.send({
+      await smtp().send({
         from: `Cultivar <${user}>`,
         to,
         subject: subjectLine,
@@ -254,7 +263,7 @@ async function notifyBooking(admin: any, bookingId: string): Promise<boolean> {
     );
   } finally {
     try {
-      await client.close();
+      await (client as SMTPClient | null)?.close(); // only set if we connected
     } catch (_) {
       /* ignore */
     }
