@@ -1,6 +1,6 @@
 ## Cultivar
 
 
-This tutoring website designed for high school students to get ahead of course work and improve their grades. University tutors provide their previous knowledge and experiences to help set up students for the future. Tutors can be selected after viewing their profiles and seeing what courses they have to offer.
+This tutoring/mentorship website designed for high school students to get ahead of course work and improve their grades. University tutors provide their previous knowledge and experiences to help set up students for the future. Tutors can be selected after viewing their profiles and seeing what courses they have to offer. 
 
 Prices begin at $40 an hour with payments processed by Stripe.
