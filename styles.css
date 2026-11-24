@@ -1,30 +1,34 @@
 :root {
-  /* Crimson Noir: #02060E · #1A1A1D · #4E4E50 · #6F2232 · #950740 · #C50337 */
-  --noir: #02060e;
-  --bg: #02060e;
-  --surf: #111216;
-  --surf2: #1a1a1d;
-  --ink: #f3ecee;
-  --mut: #a79da2;
-  --line: #26262b;
-  --line2: #4e4e50;
-  --wash: #111216;
-  --p100: #2a0d17;
-  --p300: #6f2232;
-  --wine: #950740;
-  --hot: #c3073f;
-  --red: #c50337;
-  --redd: #e0174d;
-  --rose: #ff6a8c;
-  --ok: #3ccf82;
+  /* Periwinkle Bloom: periwinkle -> aqua field, cream highlights, deep indigo ink */
+  --noir: #ffffff;
+  --bg: #f6f8ff;
+  --surf: #ffffff;
+  --surf2: #eef2fe;
+  --ink: #1c2554;
+  --mut: #535c85;
+  --line: #dde3f7;
+  --line2: #b9c4ec;
+  --wash: #e9f6fd;
+  --p100: #e3e9fe;
+  --p300: #6a8bff;
+  --wine: #3247b8;
+  --hot: #3fa9cf;
+  --red: #3b57d9;
+  --redd: #2f47c0;
+  --rose: #3247b8;
+  --ok: #15803d;
+  --peri: #6a8bff;
+  --sky: #84b2ff;
+  --aqua: #b2fcff;
+  --cream: #f8f1df;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
-  --sh: 0 1px 2px rgba(0, 0, 0, 0.5), 0 14px 40px rgba(0, 0, 0, 0.45);
-  --sh-hover: 0 6px 14px rgba(0, 0, 0, 0.5), 0 24px 54px rgba(60, 0, 18, 0.55);
-  --glow: linear-gradient(160deg, #c50337 0%, #6f2232 48%, #02060e 100%);
+  --sh: 0 1px 2px rgba(28, 37, 84, 0.06), 0 14px 40px rgba(28, 37, 84, 0.08);
+  --sh-hover: 0 6px 14px rgba(28, 37, 84, 0.08), 0 24px 54px rgba(59, 87, 217, 0.16);
+  --glow: linear-gradient(135deg, #6a8bff 0%, #84b2ff 48%, #b2fcff 100%);
   box-sizing: border-box;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 html {
@@ -158,7 +162,7 @@ section {
   background: var(--redd);
   border-color: var(--redd);
   transform: translateY(-1px);
-  box-shadow: 0 8px 22px rgba(197, 3, 55, 0.35);
+  box-shadow: 0 8px 22px rgba(59, 87, 217, 0.35);
 }
 
 .btn:active {
@@ -172,7 +176,7 @@ section {
 }
 
 .btn.alt:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(28, 37, 84, 0.045);
   border-color: var(--ink);
   box-shadow: none;
 }
@@ -184,8 +188,8 @@ section {
 }
 
 .btn.white:hover {
-  background: #ffe1e8;
-  border-color: #ffe1e8;
+  background: #e8f6fd;
+  border-color: #e8f6fd;
 }
 
 .btn.sm {
@@ -292,7 +296,7 @@ nav a.l {
 
 nav a.l:hover,
 nav a.l.on {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(28, 37, 84, 0.045);
   color: var(--ink);
 }
 
@@ -316,7 +320,7 @@ main {
   padding: 56px 0 88px;
   background: radial-gradient(
     900px 480px at 85% 0,
-    rgba(197, 3, 55, 0.25),
+    rgba(59, 87, 217, 0.25),
     transparent 70%
   );
 }
@@ -335,25 +339,25 @@ main {
   display: block;
 }
 
-.bloom path {
+.bloom .pt path {
   transform-box: fill-box;
   transform-origin: 50% 100%;
   animation: petal 1.1s var(--ease) both;
 }
 
-.bloom path:nth-child(2) {
+.bloom .pt:nth-child(3) path {
   animation-delay: 0.12s;
 }
 
-.bloom path:nth-child(3) {
+.bloom .pt:nth-child(4) path {
   animation-delay: 0.24s;
 }
 
-.bloom path:nth-child(4) {
+.bloom .pt:nth-child(5) path {
   animation-delay: 0.36s;
 }
 
-.bloom circle {
+.bloom .star {
   animation: pop 0.5s 0.7s var(--ease) both;
   transform-box: fill-box;
   transform-origin: center;
@@ -549,7 +553,7 @@ main {
   font:
     500 0.95rem Onest,
     sans-serif;
-  color: #6c656a;
+  color: #a3abcc;
   cursor: default;
   display: grid;
   place-items: center;
@@ -655,9 +659,9 @@ textarea {
   width: 100%;
   font: inherit;
   padding: 12px 14px;
-  border: 1.5px solid #34343a;
+  border: 1.5px solid #c9d2ef;
   border-radius: 12px;
-  background: #0c0d11;
+  background: #ffffff;
   color: var(--ink);
   transition:
     border-color 0.2s,
@@ -669,11 +673,11 @@ select:focus,
 textarea:focus {
   outline: 0;
   border-color: var(--red);
-  box-shadow: 0 0 0 4px rgba(197, 3, 55, 0.28);
+  box-shadow: 0 0 0 4px rgba(59, 87, 217, 0.28);
 }
 
 ::placeholder {
-  color: #8a8186;
+  color: #7e88b0;
   opacity: 1;
 }
 
@@ -1032,7 +1036,7 @@ details p {
 }
 
 .cta p {
-  color: #ffe3ea;
+  color: #eef4ff;
 }
 
 .cta h2 {
@@ -1040,8 +1044,8 @@ details p {
 }
 
 .cta form {
-  background: rgba(2, 6, 14, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(22, 30, 74, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   color: var(--ink);
   padding: 28px;
   border-radius: 24px;
@@ -1078,7 +1082,7 @@ footer .flogo {
   line-height: 0;
 }
 
-/* email-logo.png is black on white: invert + screen drops the white box */
+/* footer logo: flower mark + live wordmark (email-logo.png is only used by booking emails) */
 footer .flogo img {
   height: 40px;
   width: auto;
@@ -1126,7 +1130,7 @@ footer .fcopy {
 
 footer .fnote {
   margin: 0;
-  color: #857c81;
+  color: #5e678f;
   font-size: 0.92rem;
   max-width: 80ch;
   line-height: 1.65;
@@ -1383,7 +1387,7 @@ footer .fnote {
 }
 
 .lg .pane p {
-  color: #ffe3ea;
+  color: #eef4ff;
   font-size: 1.1rem;
 }
 
@@ -1638,7 +1642,7 @@ header {
 }
 
 header.sc {
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 10px 30px rgba(28, 37, 84, 0.1);
 }
 
 nav a.l {
@@ -1965,7 +1969,7 @@ nav a.l:hover::after {
 
 .tag {
   background: var(--p100);
-  color: #ffb4c5;
+  color: #3247b8;
   border-radius: 999px;
   padding: 4px 12px;
   font-size: 0.85rem;
@@ -2104,7 +2108,7 @@ button.tag.x:hover {
 .badge {
   display: inline-block;
   background: var(--p100);
-  color: #ffb4c5;
+  color: #3247b8;
   border-radius: 999px;
   padding: 4px 12px;
   font-weight: 600;
@@ -2112,7 +2116,7 @@ button.tag.x:hover {
 }
 
 .badge.ok {
-  background: rgba(60, 207, 130, 0.14);
+  background: rgba(22, 163, 74, 0.14);
   color: var(--ok);
 }
 
@@ -2158,14 +2162,14 @@ dialog {
   max-width: 640px;
   max-height: 90vh;
   overflow: auto;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 30px 80px rgba(28, 37, 84, 0.12);
   background: var(--surf);
   border: 1px solid var(--line);
   color: var(--ink);
 }
 
 dialog::backdrop {
-  background: rgba(2, 6, 14, 0.72);
+  background: rgba(28, 37, 84, 0.38);
   backdrop-filter: blur(4px);
 }
 
@@ -2275,8 +2279,8 @@ select option {
   translate: -50% 0;
   background: radial-gradient(
     closest-side,
-    rgba(197, 3, 55, 0.32),
-    rgba(111, 34, 50, 0.12) 60%,
+    rgba(59, 87, 217, 0.32),
+    rgba(79, 182, 222, 0.12) 60%,
     transparent
   );
   z-index: -1;
@@ -2284,11 +2288,11 @@ select option {
 }
 
 .hero .sub {
-  color: #c3b9bd;
+  color: #3f4977;
 }
 
 .stack .tc {
-  background: rgba(17, 18, 22, 0.86);
+  background: rgba(28, 37, 84, 0.2);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
@@ -2320,8 +2324,8 @@ select option {
 }
 
 .cta {
-  background: linear-gradient(150deg, #c50337 0%, #6f2232 52%, #1d0a12 100%);
-  border: 1px solid rgba(197, 3, 55, 0.35);
+  background: var(--glow);
+  border: 1px solid rgba(59, 87, 217, 0.35);
 }
 
 .cta form label {
@@ -2386,7 +2390,7 @@ table td small,
   height: 100%;
   background: radial-gradient(
     closest-side,
-    rgba(197, 3, 55, 0.18),
+    rgba(59, 87, 217, 0.18),
     transparent
   );
   z-index: -1;
@@ -2533,17 +2537,17 @@ table td small,
     linear-gradient(180deg, transparent 78%, var(--bg)),
     radial-gradient(
       62% 85% at 74% 52%,
-      rgba(197, 3, 55, 0.42),
-      rgba(149, 7, 64, 0.2) 42%,
-      rgba(111, 34, 50, 0.08) 62%,
+      rgba(59, 87, 217, 0.42),
+      rgba(63, 85, 181, 0.2) 42%,
+      rgba(79, 182, 222, 0.08) 62%,
       transparent 80%
     ),
     radial-gradient(
       45% 60% at 0% 100%,
-      rgba(149, 7, 64, 0.26),
+      rgba(63, 85, 181, 0.26),
       transparent 70%
     ),
-    linear-gradient(160deg, rgba(197, 3, 55, 0.1), transparent 45%);
+    linear-gradient(160deg, rgba(59, 87, 217, 0.1), transparent 45%);
 }
 
 .hero .wrap {
@@ -2616,20 +2620,20 @@ table td small,
 }
 
 .umap .nb {
-  fill: #16161a;
-  stroke: #2a2a30;
+  fill: #eff2fc;
+  stroke: #d8def4;
   stroke-width: 0.8;
 }
 
 .umap .ont {
-  fill: #2a0d17;
-  stroke: #7a2638;
+  fill: #e6ebfd;
+  stroke: #8ea6f8;
   stroke-width: 1;
   stroke-linejoin: round;
 }
 
 .umap .lake {
-  fill: #5d5960;
+  fill: #7a84ad;
   font:
     italic 500 12px Onest,
     sans-serif;
@@ -2642,7 +2646,7 @@ table td small,
     600 14px Onest,
     sans-serif;
   paint-order: stroke;
-  stroke: #2a0d17;
+  stroke: #e6ebfd;
   stroke-width: 4px;
   stroke-linejoin: round;
 }
@@ -2655,7 +2659,7 @@ table td small,
 
 .pin .dot {
   fill: var(--rose);
-  stroke: #2a0d17;
+  stroke: #e6ebfd;
   stroke-width: 2.4;
   transition:
     fill 0.2s,
@@ -2663,7 +2667,7 @@ table td small,
 }
 
 .pin .ring {
-  fill: rgba(255, 106, 140, 0.35);
+  fill: rgba(79, 182, 222, 0.35);
   opacity: 0;
 }
 
@@ -2752,14 +2756,14 @@ table td small,
   height: 9px;
   border-radius: 50%;
   background: var(--rose);
-  box-shadow: 0 0 0 3px rgba(197, 3, 55, 0.25);
+  box-shadow: 0 0 0 3px rgba(59, 87, 217, 0.25);
   transition:
     background 0.2s,
     transform 0.25s var(--ease);
 }
 
 .ulist li.hot {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(28, 37, 84, 0.045);
 }
 
 .ulist li.hot i {
@@ -2789,11 +2793,11 @@ table td small,
       linear-gradient(180deg, transparent 85%, var(--bg)),
       radial-gradient(
         90% 40% at 70% 72%,
-        rgba(197, 3, 55, 0.3),
-        rgba(111, 34, 50, 0.14) 50%,
+        rgba(59, 87, 217, 0.3),
+        rgba(79, 182, 222, 0.14) 50%,
         transparent 78%
       ),
-      linear-gradient(180deg, rgba(197, 3, 55, 0.08), transparent 30%);
+      linear-gradient(180deg, rgba(59, 87, 217, 0.08), transparent 30%);
   }
 }
 
@@ -2945,8 +2949,8 @@ html.js .q.rv.vis .qc {
   z-index: -1;
   background: radial-gradient(
     110% 85% at 50% 115%,
-    rgba(197, 3, 55, 0.16),
-    rgba(111, 34, 50, 0.06) 55%,
+    rgba(59, 87, 217, 0.16),
+    rgba(79, 182, 222, 0.06) 55%,
     transparent 80%
   );
   opacity: 0;
@@ -3080,18 +3084,18 @@ html.js .q.rv.vis .qc {
     linear-gradient(var(--surf), var(--surf)) padding-box,
     linear-gradient(
         150deg,
-        rgba(224, 23, 77, 0.85) 0%,
-        rgba(149, 7, 64, 0.55) 22%,
-        rgba(78, 78, 80, 0.45) 50%,
-        rgba(111, 34, 50, 0.5) 78%,
-        rgba(197, 3, 55, 0.7) 100%
+        rgba(106, 139, 255, 0.85) 0%,
+        rgba(63, 85, 181, 0.55) 22%,
+        rgba(79, 182, 222, 0.45) 50%,
+        rgba(79, 182, 222, 0.5) 78%,
+        rgba(59, 87, 217, 0.7) 100%
       )
       border-box;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 1px 2px rgba(0, 0, 0, 0.5),
-    0 24px 60px -20px rgba(0, 0, 0, 0.7),
-    0 30px 90px -40px rgba(197, 3, 55, 0.45);
+    0 1px 2px rgba(28, 37, 84, 0.1),
+    0 24px 60px -20px rgba(28, 37, 84, 0.14),
+    0 30px 90px -40px rgba(59, 87, 217, 0.45);
 }
 
 @media (prefers-contrast: more) {
@@ -3221,7 +3225,7 @@ html.js .q.rv.vis .qc {
 
 /* ---------- 1. Materials: translucent nav bar ---------- */
 header {
-  background: rgba(2, 6, 14, 0.62);
+  background: rgba(255, 255, 255, 0.72);
   -webkit-backdrop-filter: blur(22px) saturate(170%);
   backdrop-filter: blur(22px) saturate(170%);
   border-bottom: 1px solid transparent;
@@ -3233,9 +3237,9 @@ header {
 
 /* the divider only appears once content actually scrolls underneath */
 header.sc {
-  background: rgba(2, 6, 14, 0.74);
-  border-bottom-color: rgba(255, 255, 255, 0.06);
-  box-shadow: 0 12px 32px -18px rgba(0, 0, 0, 0.8);
+  background: rgba(255, 255, 255, 0.86);
+  border-bottom-color: rgba(28, 37, 84, 0.054);
+  box-shadow: 0 12px 32px -18px rgba(28, 37, 84, 0.16);
 }
 
 header .wrap {
@@ -3251,7 +3255,7 @@ nav a.l {
 }
 
 nav a.l:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(28, 37, 84, 0.045);
 }
 
 nav a.l::after {
@@ -3312,23 +3316,23 @@ p.mut.center {
 .btn:not(.alt):not(.white):not([disabled]) {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 8px 22px -10px rgba(197, 3, 55, 0.7);
+    0 8px 22px -10px rgba(59, 87, 217, 0.7);
 }
 
 .btn:not(.alt):not(.white):not([disabled]):hover {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    0 12px 30px -10px rgba(197, 3, 55, 0.85);
+    0 12px 30px -10px rgba(59, 87, 217, 0.85);
 }
 
 .btn.alt {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(28, 37, 84, 0.027);
+  border-color: rgba(28, 37, 84, 0.144);
 }
 
 .btn.alt:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(28, 37, 84, 0.063);
+  border-color: rgba(28, 37, 84, 0.2);
 }
 
 /* pressed state lands immediately, releases on the spring */
@@ -3345,14 +3349,14 @@ summary:active {
 .tc,
 .card {
   border-radius: var(--r-card);
-  border-color: rgba(255, 255, 255, 0.07);
+  border-color: rgba(28, 37, 84, 0.063);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 40%),
+    linear-gradient(180deg, rgba(28, 37, 84, 0.032), transparent 40%),
     var(--surf);
   box-shadow:
     var(--edge),
-    0 1px 2px rgba(0, 0, 0, 0.4),
-    0 18px 40px -24px rgba(0, 0, 0, 0.7);
+    0 1px 2px rgba(28, 37, 84, 0.08),
+    0 18px 40px -24px rgba(28, 37, 84, 0.14);
 }
 
 /* no 3D tilt: a small lift that follows the pointer in and out on one curve */
@@ -3368,11 +3372,11 @@ summary:active {
 
 .tc:hover {
   --lift: -4px;
-  border-color: rgba(197, 3, 55, 0.45);
+  border-color: rgba(59, 87, 217, 0.45);
   box-shadow:
     var(--edge),
-    0 2px 4px rgba(0, 0, 0, 0.4),
-    0 28px 56px -26px rgba(120, 0, 30, 0.75);
+    0 2px 4px rgba(28, 37, 84, 0.08),
+    0 28px 56px -26px rgba(63, 85, 181, 0.225);
 }
 
 .tc:active {
@@ -3386,9 +3390,9 @@ summary:active {
 }
 
 .tag {
-  background: rgba(197, 3, 55, 0.12);
-  color: #ffb4c5;
-  box-shadow: inset 0 0 0 1px rgba(255, 106, 140, 0.16);
+  background: rgba(59, 87, 217, 0.12);
+  color: #3247b8;
+  box-shadow: inset 0 0 0 1px rgba(79, 182, 222, 0.16);
 }
 
 /* ---------- 5. Rhythm: one spacing scale, one panel radius ---------- */
@@ -3408,26 +3412,26 @@ section {
 
 .about {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 30%),
+    linear-gradient(180deg, rgba(28, 37, 84, 0.023), transparent 30%),
     var(--surf);
-  border-color: rgba(255, 255, 255, 0.06);
+  border-color: rgba(28, 37, 84, 0.054);
   box-shadow: var(--edge);
 }
 
 .unis {
   box-shadow:
     var(--edge),
-    0 30px 80px -40px rgba(197, 3, 55, 0.45);
+    0 30px 80px -40px rgba(59, 87, 217, 0.45);
 }
 
 /* "Who we are": long copy reads as a calm column with a hairline guide */
 #about .split > :last-child {
-  border-left: 1px solid rgba(255, 255, 255, 0.07);
+  border-left: 1px solid rgba(28, 37, 84, 0.063);
   padding-left: clamp(24px, 3vw, 44px);
 }
 
 #about .split > :last-child p {
-  color: #cfc6ca;
+  color: #3a4370;
 }
 
 #about .split > :last-child h3 {
@@ -3459,7 +3463,7 @@ summary::after {
   height: 30px;
   flex: none;
   border-radius: 50%;
-  background: rgba(197, 3, 55, 0.12);
+  background: rgba(59, 87, 217, 0.12);
   font-size: 1.25rem;
   transition:
     transform 0.45s var(--spring),
@@ -3468,7 +3472,7 @@ summary::after {
 
 details[open] summary::after {
   transform: rotate(135deg);
-  background: rgba(197, 3, 55, 0.24);
+  background: rgba(59, 87, 217, 0.24);
 }
 
 details::details-content {
@@ -3504,7 +3508,7 @@ html.js .rv.vis {
 
 /* ---------- Footer ---------- */
 footer {
-  border-top-color: rgba(255, 255, 255, 0.06);
+  border-top-color: rgba(28, 37, 84, 0.054);
 }
 
 /* ---------- 6. Accessibility variants ---------- */
@@ -3550,7 +3554,7 @@ footer {
 
   .mut,
   p.mut {
-    color: #cdc4c8;
+    color: #3a4370;
   }
 }
 
@@ -3570,8 +3574,8 @@ header img {
   height: 44px;
   flex: none;
   border-radius: 14px;
-  background: rgba(197, 3, 55, 0.12);
-  box-shadow: inset 0 0 0 1px rgba(255, 106, 140, 0.18);
+  background: rgba(59, 87, 217, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(79, 182, 222, 0.18);
   color: var(--rose);
 }
 
@@ -3599,13 +3603,13 @@ header img {
   flex-direction: column;
   padding: 22px 10px 12px;
   border-radius: var(--r-card, 22px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(28, 37, 84, 0.063);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 40%),
+    linear-gradient(180deg, rgba(28, 37, 84, 0.032), transparent 40%),
     var(--surf);
   box-shadow:
     var(--edge, inset 0 1px 0 rgba(255, 255, 255, 0.06)),
-    0 18px 40px -24px rgba(0, 0, 0, 0.7);
+    0 18px 40px -24px rgba(28, 37, 84, 0.14);
 }
 
 .hcard .hc-top {
@@ -3637,7 +3641,7 @@ header img {
 }
 
 .help .hcard li + li {
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(28, 37, 84, 0.054);
 }
 
 .hl-link,
@@ -3660,7 +3664,7 @@ header img {
 }
 
 .hl-link:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(28, 37, 84, 0.045);
 }
 
 .hl-link:active {
@@ -3694,9 +3698,9 @@ header img {
 
 /* "Beyond the classroom": every tutor offers it, so it's a crimson-lit card, not a filter */
 .help > div.hcard.beyond {
-  border-color: rgba(197, 3, 55, 0.35);
+  border-color: rgba(59, 87, 217, 0.35);
   background:
-    linear-gradient(160deg, rgba(197, 3, 55, 0.2), rgba(111, 34, 50, 0.08) 45%, transparent 80%),
+    linear-gradient(160deg, rgba(59, 87, 217, 0.2), rgba(79, 182, 222, 0.08) 45%, transparent 80%),
     var(--surf);
 }
 
@@ -3734,7 +3738,7 @@ header img {
   padding: 0;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(28, 37, 84, 0.072);
 }
 
 .why-list li {
@@ -3743,7 +3747,7 @@ header img {
 
 .why-list li + li {
   padding-left: 36px;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 1px solid rgba(28, 37, 84, 0.072);
 }
 
 .why-list h3 {
@@ -3782,7 +3786,7 @@ header img {
     border-left: 0;
   }
   .why-list li + li {
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid rgba(28, 37, 84, 0.072);
   }
 }
 
@@ -3805,12 +3809,12 @@ input[aria-invalid="true"],
 select[aria-invalid="true"],
 textarea[aria-invalid="true"] {
   border-color: var(--red) !important;
-  box-shadow: 0 0 0 3px rgba(197, 3, 55, 0.22);
+  box-shadow: 0 0 0 3px rgba(59, 87, 217, 0.22);
 }
 
 fieldset[aria-invalid="true"] {
   border-color: var(--red) !important;
-  box-shadow: 0 0 0 3px rgba(197, 3, 55, 0.22);
+  box-shadow: 0 0 0 3px rgba(59, 87, 217, 0.22);
   border-radius: 14px;
 }
 
@@ -3820,7 +3824,7 @@ fieldset[aria-invalid="true"] {
 .hero {
   background:
     linear-gradient(180deg, transparent 72%, var(--bg)),
-    radial-gradient(70% 90% at 82% 40%, rgba(197, 3, 55, 0.16), transparent 70%);
+    radial-gradient(70% 90% at 82% 40%, rgba(59, 87, 217, 0.16), transparent 70%);
 }
 
 .hero .wrap::before {
@@ -3848,17 +3852,17 @@ fieldset[aria-invalid="true"] {
 
 .unis {
   background: var(--surf);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(28, 37, 84, 0.072);
   box-shadow:
     var(--edge),
-    0 24px 48px -28px rgba(0, 0, 0, 0.8);
+    0 24px 48px -28px rgba(28, 37, 84, 0.16);
 }
 
 .btn:not(.alt):not(.white):not([disabled]),
 .btn:not(.alt):not(.white):not([disabled]):hover {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 1px 2px rgba(0, 0, 0, 0.45);
+    0 1px 2px rgba(28, 37, 84, 0.09);
 }
 
 /* How it works: a plain labelled sequence, no badges or dashed connector */
@@ -3875,7 +3879,7 @@ html.js .steps.vis::before {
   height: auto;
   margin-bottom: 12px;
   padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid rgba(28, 37, 84, 0.108);
   border-radius: 0;
   background: none;
   box-shadow: none;
@@ -3912,7 +3916,7 @@ html.js .steps.vis::before {
 .legal .lg-toc {
   margin: 28px 0 8px;
   padding: 18px 22px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(28, 37, 84, 0.072);
   border-radius: 16px;
   background: var(--surf);
 }
@@ -3938,7 +3942,7 @@ html.js .steps.vis::before {
 .legal p,
 .legal li {
   max-width: 68ch;
-  color: #cfc6ca;
+  color: #3a4370;
   line-height: 1.65;
 }
 
@@ -3962,7 +3966,7 @@ html.js .steps.vis::before {
 .legal .lg-alt {
   margin-top: 48px;
   padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(28, 37, 84, 0.072);
 }
 
 .lg-note {
@@ -4009,18 +4013,18 @@ html.js .steps.vis::before {
 .badge.pend {
   white-space: nowrap;
   background: rgba(240, 177, 60, 0.14);
-  color: #f3c46b;
+  color: #8a5a00;
   box-shadow: inset 0 0 0 1px rgba(240, 177, 60, 0.3);
 }
 
 .note.pend {
   border-color: rgba(240, 177, 60, 0.35);
   background: rgba(240, 177, 60, 0.08);
-  color: #f1e3c4;
+  color: #5e4a1c;
 }
 
 .note.pend b {
-  color: #f3c46b;
+  color: #8a5a00;
 }
 
 /* ===== v24: booking sidebar uses the current white wordmark ===== */
@@ -4051,4 +4055,767 @@ html.js .steps.vis::before {
 .help .hcard .hl-link,
 .help .hcard.beyond .hl-name {
   flex: 1;
+}
+
+/* ===== v22: skip link + programmatic focus targets =====
+   The skip link stays off-screen until a keyboard user tabs to it. Headings and #app
+   get focus after a page change so screen readers announce the new page; they aren't
+   controls, so they don't show the focus ring. */
+.skip {
+  position: fixed;
+  top: calc(8px + env(safe-area-inset-top, 0px));
+  left: 8px;
+  z-index: 1000;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: var(--ink);
+  color: var(--bg);
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+
+.skip:focus-visible {
+  transform: none;
+}
+
+[tabindex="-1"]:focus {
+  outline: none;
+}
+
+/* ===== Light theme: logo artwork is white, so tint it to the navy ink ===== */
+header img,
+.side img {
+  filter: brightness(0) saturate(100%) invert(13%) sepia(38%) saturate(1500%) hue-rotate(176deg) brightness(92%);
+  mix-blend-mode: normal;
+}
+
+footer .flogo img {
+  filter: none;
+  mix-blend-mode: multiply;
+}
+
+.logos .m {
+  filter: brightness(0) saturate(100%) invert(13%) sepia(38%) saturate(1500%) hue-rotate(176deg) brightness(92%);
+  opacity: 0.62;
+}
+
+/* contact form sits on the blue-green CTA as a white card */
+.cta form {
+  background: #ffffff;
+  border-color: transparent;
+  color: var(--ink);
+  box-shadow: 0 24px 50px -24px rgba(22, 30, 74, 0.45);
+}
+
+.cta form label {
+  color: var(--ink);
+}
+
+/* ===== Bolder & brighter pass ===== */
+/* hero: a visible sky-blue wash on the right, a leaf-green glow bottom left */
+.hero {
+  background:
+    linear-gradient(180deg, transparent 70%, var(--bg)),
+    radial-gradient(60% 85% at 80% 38%, rgba(106, 139, 255, 0.22), transparent 70%),
+    radial-gradient(45% 70% at 4% 96%, rgba(132, 220, 240, 0.2), transparent 70%),
+    linear-gradient(160deg, #e6ecff 0%, #f6f8ff 55%, #e9f8fd 100%);
+}
+
+.hero h1 .w:nth-last-child(-n + 3) {
+  color: var(--red);
+}
+
+/* uni panel: crisp blue-to-green edge */
+.unis {
+  background:
+    linear-gradient(var(--surf), var(--surf)) padding-box,
+    linear-gradient(150deg, #5774ee 0%, #84b2ff 45%, #6a8bff 100%) border-box;
+  box-shadow:
+    0 1px 2px rgba(28, 37, 84, 0.08),
+    0 30px 70px -36px rgba(106, 139, 255, 0.45);
+}
+
+.logos li::before {
+  background: radial-gradient(
+    110% 85% at 50% 115%,
+    rgba(106, 139, 255, 0.14),
+    rgba(132, 220, 240, 0.08) 55%,
+    transparent 80%
+  );
+}
+
+/* tinted section bands so the page isn't all white */
+.about {
+  background: linear-gradient(160deg, #e6ecff 0%, #ffffff 50%, #e9f6fd 100%);
+  border-color: #d6defb;
+}
+
+.tag {
+  background: #e3e9fe;
+  color: #3247b8;
+  box-shadow: inset 0 0 0 1px rgba(106, 139, 255, 0.18);
+}
+
+.tc:hover {
+  border-color: rgba(106, 139, 255, 0.5);
+}
+
+/* ===== Footer: dark navy band ===== */
+footer {
+  background: #0b2540;
+  border-top: 4px solid transparent;
+  border-image: linear-gradient(90deg, #3b57d9, #6a8bff) 1;
+  color: #eceffc;
+}
+
+footer .ftop {
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+}
+
+footer .flogo img {
+  filter: invert(1);
+  mix-blend-mode: screen;
+}
+
+footer .flinks a {
+  color: #eceffc;
+}
+
+footer .flinks a:hover {
+  color: #b2fcff;
+  border-color: #b2fcff;
+}
+
+footer .fcopy {
+  color: #bcc6ea;
+}
+
+footer .fnote {
+  color: #8f9bc6;
+}
+
+footer a:focus-visible {
+  outline-color: #b2fcff;
+}
+
+/* ===== University logos: full colour, "lift and underline" hover ===== */
+/* one colour logo per tile, in normal flow; logoFit() sizes it */
+.logos .m,
+.logos li:hover .m,
+.logos li:active .m {
+  opacity: 0;
+  filter: none;
+}
+
+.logos .c,
+.logos li:hover .c,
+.logos li:active .c {
+  opacity: 1;
+}
+
+.logos li {
+  transition: background-color 0.35s var(--ease);
+}
+
+/* old radial glow off; a blue-to-green bar grows from the centre instead */
+.logos li::before {
+  inset: auto 22% 0 22%;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(90deg, #3b57d9, #6a8bff);
+  opacity: 1;
+  transform: scaleX(0);
+  transition: transform 0.45s var(--ease);
+}
+
+.logos .ulogo {
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@media (hover: hover) {
+  .logos li:hover {
+    background-color: #f1f4ff;
+  }
+  .logos li:hover::before {
+    transform: scaleX(1);
+  }
+  .logos li:hover .ulogo {
+    transform: translateY(-4px) scale(1.08);
+  }
+}
+
+.logos li:active {
+  background-color: #e6ecff;
+}
+.logos li:active::before {
+  transform: scaleX(1);
+}
+.logos li:active .ulogo {
+  transform: translateY(-2px) scale(1.03);
+  transition-duration: 0.12s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logos li::before {
+    transition: none;
+  }
+  .logos li:hover .ulogo,
+  .logos li:active .ulogo {
+    transform: none;
+  }
+}
+
+/* ===== Periwinkle Bloom theme =====
+   Brand field from the cultivar+ story posts: periwinkle -> sky -> aqua, cream
+   highlights. The field owns the hero and footer; everything between stays calm. */
+:root {
+  --field: linear-gradient(135deg, #5a7bf6 0%, #84b2ff 52%, #b2fcff 100%);
+}
+
+::selection {
+  background: var(--peri);
+  color: #fff;
+}
+
+/* --- logo lockup: flower mark + live wordmark --- */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: #3247b8;
+}
+
+.brand img {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  transition: transform 0.6s var(--ease);
+}
+
+.brand .wm {
+  font: 800 1.85rem/1 Gabarito, Onest, sans-serif;
+  letter-spacing: -0.035em;
+  color: currentColor;
+  padding-bottom: 3px;
+}
+
+.brand .wm b {
+  font-weight: 800;
+  color: var(--peri);
+}
+
+a.brand:hover img {
+  transform: rotate(45deg);
+}
+
+header .wrap {
+  padding-left: 24px;
+}
+
+header .wrap > a.brand {
+  height: auto;
+  width: auto;
+  overflow: visible;
+}
+
+header .wrap > a.brand img {
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  object-fit: contain;
+  filter: none;
+  mix-blend-mode: normal;
+  opacity: 1;
+}
+
+@media (max-width: 900px) {
+  header .wrap {
+    padding-left: 18px;
+  }
+  .brand .wm {
+    font-size: 1.55rem;
+  }
+  header .wrap > a.brand img {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+.side .side-brand {
+  margin-bottom: 22px;
+  gap: 8px;
+}
+
+.side .side-brand img {
+  width: 30px;
+  height: 30px;
+  filter: none;
+  mix-blend-mode: normal;
+  margin: 0;
+}
+
+.side .side-brand .wm {
+  font-size: 1.4rem;
+}
+
+/* --- hero: a soft periwinkle wash, the strong field is saved for the CTA and footer --- */
+.hero {
+  background:
+    linear-gradient(180deg, transparent 70%, var(--bg)),
+    radial-gradient(60% 85% at 80% 38%, rgba(106, 139, 255, 0.24), transparent 70%),
+    radial-gradient(45% 70% at 4% 96%, rgba(132, 220, 240, 0.24), transparent 70%),
+    linear-gradient(160deg, #e6ecff 0%, #f6f8ff 55%, #e9f8fd 100%);
+}
+
+.hero h1 .w:nth-last-child(-n + 3) {
+  color: var(--red);
+}
+
+/* --- "Why a university student?" matches the Who we are panel below it --- */
+.why {
+  background: linear-gradient(160deg, #e6ecff 0%, #ffffff 50%, #e9f6fd 100%);
+  border: 1px solid #d6defb;
+  border-radius: var(--r-panel);
+  margin-inline: clamp(12px, 2vw, 24px);
+  box-shadow: var(--edge);
+}
+
+.why + .about {
+  margin-top: clamp(12px, 2vw, 24px);
+}
+
+/* --- CTA band and login pane share the field --- */
+.cta,
+.lg .pane {
+  background: var(--field);
+  color: var(--ink);
+}
+
+.cta h2,
+.lg .pane h1 {
+  color: var(--ink);
+}
+
+.cta p,
+.lg .pane p {
+  color: #222c63;
+}
+
+.cta form {
+  background: rgba(255, 255, 255, 0.55);
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
+/* --- footer: the field returns to close the page --- */
+footer {
+  background: var(--field);
+  border-top: 0;
+  border-image: none;
+  color: var(--ink);
+}
+
+footer .ftop {
+  border-bottom-color: rgba(28, 37, 84, 0.16);
+}
+
+footer .flogo {
+  display: inline-flex;
+  line-height: 1;
+  color: var(--ink);
+}
+
+footer .flogo img {
+  width: 44px;
+  height: 44px;
+  filter: none;
+  mix-blend-mode: normal;
+}
+
+footer .flogo .wm {
+  font-size: 2.1rem;
+  color: var(--ink);
+}
+
+footer .flogo .wm b {
+  color: var(--cream);
+}
+
+footer .flogo:hover img {
+  transform: rotate(45deg);
+}
+
+footer .flinks a {
+  color: var(--ink);
+}
+
+footer .flinks a:hover {
+  color: var(--ink);
+  border-color: var(--cream);
+}
+
+footer .fcopy {
+  color: #222c63;
+}
+
+footer .fnote {
+  color: #2c3670;
+}
+
+footer a:focus-visible {
+  outline-color: var(--ink);
+}
+
+/* --- breathing room above the hero headline and university panel --- */
+.hero {
+  padding-top: clamp(72px, 9vw, 128px);
+}
+
+/* --- closing band: periwinkle light at the top sinking into deep navy, into a navy footer --- */
+.cta {
+  background:
+    radial-gradient(70% 60% at 50% 0%, rgba(132, 178, 255, 0.45), transparent 70%),
+    linear-gradient(180deg, #5a7bf6 0%, #3247b8 38%, #1a2366 72%, #0d1335 100%);
+  border-color: rgba(106, 139, 255, 0.35);
+  color: #eef1ff;
+}
+
+.cta h2 {
+  color: #ffffff;
+}
+
+.cta p {
+  color: #c9d2f5;
+}
+
+.cta form {
+  background: rgba(255, 255, 255, 0.96);
+  border-color: transparent;
+  box-shadow: 0 30px 60px -30px rgba(5, 8, 30, 0.7);
+}
+
+.cta :focus-visible {
+  outline-color: var(--aqua);
+}
+
+footer {
+  background: linear-gradient(180deg, #0d1335 0%, #080c24 100%);
+  color: #e6eaff;
+}
+
+footer .ftop {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+footer .flogo,
+footer .flogo .wm {
+  color: #ffffff;
+}
+
+footer .flogo .wm b {
+  color: var(--sky);
+}
+
+footer .flinks a {
+  color: #e6eaff;
+}
+
+footer .flinks a:hover {
+  color: #ffffff;
+  border-color: var(--sky);
+}
+
+footer .fcopy {
+  color: #b7c1ea;
+}
+
+footer .fnote {
+  color: #8e99c8;
+}
+
+footer a:focus-visible {
+  outline-color: var(--aqua);
+}
+
+/* ===== Closing band: one continuous fall from the page into deep navy =====
+   The contact section and footer share a single gradient, like the night end of a
+   page: periwinkle light at the top, an orbit of cultivar+ marks, then navy. */
+.cta {
+  --navy: #0b1030;
+  margin: clamp(56px, 8vw, 96px) 0 0;
+  border: 0;
+  border-radius: 0;
+  padding-block: clamp(96px, 12vw, 160px) clamp(72px, 9vw, 112px);
+  background:
+    radial-gradient(60% 45% at 50% 0%, rgba(178, 252, 255, 0.35), transparent 70%),
+    linear-gradient(
+      180deg,
+      var(--bg) 0%,
+      #a9bcff 10%,
+      #6a8bff 24%,
+      #3b57d9 42%,
+      #22308a 62%,
+      #131a4f 82%,
+      var(--navy) 100%
+    );
+  color: #eef1ff;
+  text-align: center;
+}
+
+.cta::before {
+  display: none;
+}
+
+.cta .wrap {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  gap: clamp(40px, 6vw, 64px);
+}
+
+.cta-copy {
+  display: grid;
+  justify-items: center;
+}
+
+.cta h2 {
+  color: #ffffff;
+  font-size: clamp(2.8rem, 7vw, 5rem);
+  letter-spacing: -0.03em;
+  margin-bottom: 0.3em;
+}
+
+.cta-copy > p {
+  color: #e3e8ff;
+  font-size: 1.15rem;
+  margin-inline: auto;
+}
+
+.cta .row {
+  justify-content: center;
+}
+
+.cta .btn.white {
+  min-width: 200px;
+  box-shadow: 0 18px 40px -18px rgba(8, 12, 40, 0.7);
+}
+
+.cta .cta-mail {
+  margin: 22px 0 0;
+  font-size: 0.98rem;
+  color: #c9d2f5;
+}
+
+.cta .cta-mail a {
+  color: #ffffff;
+  text-decoration-color: var(--aqua);
+}
+
+/* the form sits low in the dark, as frosted glass */
+.cta form {
+  width: min(100%, 560px);
+  text-align: left;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 40px 80px -40px rgba(0, 0, 0, 0.6);
+}
+
+.cta form label {
+  color: #dfe5ff;
+}
+
+.cta form input,
+.cta form textarea {
+  background: rgba(255, 255, 255, 0.96);
+  border-color: transparent;
+}
+
+.cta form .err {
+  color: #ffd2d2;
+}
+
+/* orbit: two faint rings and five slowly circling marks behind the headline */
+.orbit {
+  position: absolute;
+  left: 50%;
+  top: clamp(40px, 6vw, 72px);
+  width: min(92vw, 620px);
+  aspect-ratio: 1;
+  translate: -50% 0;
+  pointer-events: none;
+}
+
+.orbit .ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.orbit .r2 {
+  inset: 16%;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.orbit .spin {
+  position: absolute;
+  inset: 0;
+  animation: orbit 60s linear infinite;
+}
+
+.orbit img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  transform: rotate(var(--a)) translateY(calc(min(92vw, 620px) / -2)) rotate(calc(var(--a) * -1));
+  filter: drop-shadow(0 6px 14px rgba(10, 16, 60, 0.35));
+}
+
+@keyframes orbit {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit .spin {
+    animation: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .cta {
+    margin-inline: 0;
+    border-radius: 0;
+  }
+  .orbit img {
+    width: 26px;
+    height: 26px;
+    margin: -13px 0 0 -13px;
+  }
+}
+
+/* footer continues the same navy with no seam */
+footer {
+  background: linear-gradient(180deg, #0b1030 0%, #070a20 100%);
+  border-top: 0;
+  border-image: none;
+  margin-top: 0;
+}
+
+/* overlap one pixel so subpixel rounding never draws a seam between band and footer */
+#contact.cta {
+  margin-bottom: -1px;
+}
+
+/* the colour logo is now the only image in each tile, so it sits in normal flow */
+.logos .c,
+.logos li:hover .c,
+.logos li:active .c {
+  position: static;
+  inset: auto;
+  width: auto;
+  opacity: 1;
+}
+
+/* ===== Hand-lettered wordmark =====
+   One transparent PNG used as a mask, so the lettering takes the colour of its
+   context: deep periwinkle on light surfaces, white on the navy footer. */
+.brand .wm {
+  --wm-h: 30px;
+  display: block;
+  height: var(--wm-h);
+  width: calc(var(--wm-h) * 1296 / 253);
+  padding: 0;
+  font-size: 0;
+  background: currentColor;
+  -webkit-mask: url("assets/cultivar-wordmark.png") no-repeat left center / contain;
+  mask: url("assets/cultivar-wordmark.png") no-repeat left center / contain;
+}
+
+.brand {
+  gap: 12px;
+}
+
+header .brand .wm {
+  --wm-h: 31px;
+  color: #3247b8;
+}
+
+footer .flogo .wm {
+  --wm-h: 38px;
+  color: #ffffff;
+}
+
+.side .side-brand .wm {
+  --wm-h: 24px;
+  color: #3247b8;
+}
+
+@media (max-width: 900px) {
+  header .brand .wm {
+    --wm-h: 26px;
+  }
+}
+
+@media (max-width: 480px) {
+  header .brand {
+    gap: 8px;
+  }
+  header .brand .wm {
+    --wm-h: 25px;
+  }
+  header .btn {
+    white-space: nowrap;
+  }
+}
+
+/* ===== Header: logo flush left, page links beside it, account + booking flush right ===== */
+header .wrap {
+  max-width: none;
+  padding-inline: clamp(20px, 3vw, 40px);
+  justify-content: flex-start;
+  gap: clamp(20px, 3vw, 40px);
+}
+
+header nav#nv {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+}
+
+header nav#nv .nl,
+header nav#nv .nr {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+header nav#nv .nr {
+  margin-left: auto;
+}
+
+/* the wordmark is black in the header */
+header .brand .wm {
+  color: #111111;
+}
+
+@media (max-width: 900px) {
+  header .wrap {
+    padding-inline: 18px;
+  }
+  header nav#nv .nl {
+    display: none;
+  }
 }

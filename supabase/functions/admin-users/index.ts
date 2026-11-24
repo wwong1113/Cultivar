@@ -57,6 +57,10 @@ async function getCaller(req: Request, admin = adminClient()) {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL = /^\S+@\S+\.\S+$/;
+// Stored links are shown to other users, so only accept the shapes the site expects.
+const PAY_LINK = /^https:\/\/(buy|donate)\.stripe\.com\/[^\s"'<>]*$/;
+const AVATAR_PREFIX = `${(Deno.env.get("SUPABASE_URL") ?? "").replace(/\/+$/, "")}/storage/v1/object/public/avatars/`;
+const str = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
 const strList = (v: unknown, max: number) =>
   Array.isArray(v)
     ? v
@@ -110,13 +114,13 @@ Deno.serve(async (req) => {
           name: String(b.name ?? "")
             .trim()
             .slice(0, 100),
-          grade: b.grade,
-          uni: b.uni,
-          program: b.program,
+          grade: [9, 10, 11, 12].includes(Number(b.grade)) ? Number(b.grade) : null,
+          uni: str(b.uni, 120),
+          program: str(b.program, 120),
           subjects: strList(b.subjects, 15),
           vibe: strList(b.vibe, 12),
-          bio: b.bio,
-          pay_link: b.pay_link,
+          bio: str(b.bio, 400),
+          pay_link: PAY_LINK.test(str(b.pay_link, 500)) ? str(b.pay_link, 500) : null,
         },
       });
       if (error) return json(cors, { error: error.message }, 400);
@@ -158,9 +162,18 @@ Deno.serve(async (req) => {
           .slice(0, 400);
       if ("subjects" in b) patch.subjects = strList(b.subjects, 15);
       if ("vibe" in b) patch.vibe = strList(b.vibe, 12);
-      if ("pay_link" in b)
-        patch.pay_link = b.pay_link ? String(b.pay_link).trim() : null;
-      if ("photo" in b) patch.photo = b.photo ? String(b.photo) : null;
+      if ("pay_link" in b) {
+        const link = str(b.pay_link, 500);
+        if (link && !PAY_LINK.test(link))
+          return json(cors, { error: "Payment link must be a buy.stripe.com link." }, 400);
+        patch.pay_link = link || null;
+      }
+      if ("photo" in b) {
+        const photo = str(b.photo, 500);
+        if (photo && !photo.startsWith(AVATAR_PREFIX))
+          return json(cors, { error: "Bad photo URL." }, 400);
+        patch.photo = photo || null;
+      }
       if ("rate" in b)
         patch.rate = b.rate === null || b.rate === "" ? null : Number(b.rate);
       if (b.email) {

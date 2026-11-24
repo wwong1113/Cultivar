@@ -2,8 +2,9 @@ document.documentElement.classList.add("js");
 const $ = (s) => document.querySelector(s),
   esc = (s) =>
     String(s ?? "").replace(
-      /[&<>"]/g,
-      (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
+      /[&<>"']/g,
+      (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
     );
 const LS = {
   get: (k, d) => {
@@ -168,9 +169,8 @@ const C = {
   // one-line summary under the hero buttons; the first item is emphasized
   note: ["$40/hour", "1-on-1 tutoring", "University student tutors"],
   // Hero "Where our tutors study" logo wall: [name, city, logo file slug].
-  // Logos load from assets/unis/mono/<slug>.png (single-tone, built from the colour
-  // file in assets/unis/<slug>.png by scripts/build-uni-logos.py); the colour file
-  // fades in on hover/press. Until a file exists, its tile shows the name instead.
+  // Logos load from assets/unis/light/<slug>.png and logoFit() sizes each one from its
+  // own shape. Until a file exists, its tile shows the name instead.
   // (City must match a key in MAP.cities if the map is switched back on.)
   unis: [
     ["Western University", "London", "western"],
@@ -187,15 +187,13 @@ const C = {
   intro:
     "Cultivar+ connects students in Grades 9–12 with university tutors who recently took the same courses and made the same transition.",
   overview: [
-    "Cultivar+ is a tutoring and mentorship service that goes above and beyond, connecting high school students with university student tutors who have recently gone through the same courses, university applications, and transition into post-secondary education.",
-    "We primarily serve students in Grades 9 to 12, with a focus on senior-level courses such as Advanced Functions, Calculus & Vectors, Biology, Chemistry, Business, English, and other high school subjects.",
-    "Our tutors are current university students from different programs and schools. Students can choose tutors based not only on the subject they need help with, but also on their personality, university, program, interests, and experience.",
-    "The goal is to make tutoring feel more personal than a traditional tutoring centre. We want students to learn from someone who feels approachable and relatable: someone who was recently in their position.",
+    "Cultivar+ is a tutoring and mentorship service for students in Grades 9 to 12, with a focus on senior courses like Advanced Functions, Calculus & Vectors, Biology, Chemistry, English and Business.",
+    "We want tutoring to feel more personal than a traditional tutoring centre: help from someone approachable who was in your position not long ago.",
   ],
   mission: [
-    "Our mission is to help high school students grow academically while connecting them with mentors and alumni who understand what they are going through.",
-    "We believe tutoring should go beyond completing homework or preparing for the next test. Students should be able to build confidence, improve their understanding, develop stronger study habits, and learn from someone who has recently experienced the same academic and university transition.",
-    "Our tutors provide personalized academic support while also being available to share their own experiences with university programs, applications, study habits, and student life.",
+    "To help high school students grow academically and in confidence, beyond the next homework set or test: a better grasp of the material, stronger study habits, and an honest picture of university life.",
+    "Cultivar+ is a tutoring and mentorship service for students in Grades 9 to 12. We focus on the senior courses that shape university applications, like Advanced Functions, Calculus & Vectors, Biology, Chemistry, English and Business, and help with other high school subjects too.",
+    "Tutoring shouldn't feel like a tutoring centre. Our tutors are current university students from different schools and programs, so you learn from someone approachable who was in your position not long ago. Alongside the coursework, they're happy to talk through programs, applications and what first year is really like.",
   ],
   subjects: [
     "Grade 9–10 Mathematics",
@@ -238,8 +236,8 @@ const C = {
   ],
   why: [
     [
-      "They just took your course.",
-      "Your tutor sat the same senior courses recently, so the material, and the parts that trip people up, are still fresh.",
+      "They took the same courses, recently.",
+      "Your tutor finished the same Grade 11 and 12 courses only a few years ago. They know what the tests ask for and which units catch people out.",
     ],
     [
       "They’ve made the jump you’re about to.",
@@ -888,7 +886,7 @@ let logoRefit;
 const logoRO = new ResizeObserver(() => {
   cancelAnimationFrame(logoRefit);
   logoRefit = requestAnimationFrame(() =>
-    document.querySelectorAll(".logos .m").forEach(logoFit),
+    document.querySelectorAll(".logos .c").forEach(logoFit),
   );
 });
 window.logoFit = logoFit;
@@ -904,26 +902,28 @@ function uniHover() {
     e.addEventListener("pointerleave", () => hl(e.dataset.c, false));
   });
 }
-// The Cultivar+ bloom: four marker-stroke petals that read as the "+" in the wordmark.
+// The Cultivar+ mark: four periwinkle petals around a four-point star.
 const MARK_PETAL =
-  "M0 -11C-8 -15 -10.5 -31 -9 -44C-8 -53 8 -53 9 -44C10.5 -31 8 -15 0 -11Z";
+  "M50 7.5C45.5 14 36 21.5 36 30.5C36 38 41.5 43.5 50 50C58.5 43.5 64 38 64 30.5C64 21.5 54.5 14 50 7.5Z";
+const MARK_STAR =
+  "M50 28C50.6 39 51.4 44.5 53.3 46.7C55.5 48.6 61 49.4 71 50C61 50.6 55.5 51.4 53.3 53.3C51.4 55.5 50.6 61 50 72C49.4 61 48.6 55.5 46.7 53.3C44.5 51.4 39 50.6 29 50C39 49.4 44.5 48.6 46.7 46.7C48.6 44.5 49.4 39 50 28Z";
 const bloomSvg = () =>
-  `<svg class="bloom" viewBox="-60 -60 120 120" aria-hidden="true"><defs><linearGradient id="bg1" gradientUnits="userSpaceOnUse" x1="-30" y1="-55" x2="30" y2="55"><stop offset="0" stop-color="#e0174d"/><stop offset=".5" stop-color="#c50337"/><stop offset="1" stop-color="#950740"/></linearGradient></defs><g fill="url(#bg1)">${[
-    [0, 1],
-    [89, 0.95],
-    [181, 1.03],
-    [271, 0.97],
-  ]
+  `<svg class="bloom" viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="bg1" gradientUnits="userSpaceOnUse" x1="50" y1="7.5" x2="50" y2="50"><stop offset="0" stop-color="#b3c4fb"/><stop offset=".55" stop-color="#8ea6f8"/><stop offset="1" stop-color="#4a6ff2"/></linearGradient></defs>${[0, 90, 180, 270]
     .map(
-      ([r, k]) =>
-        `<path transform="rotate(${r}) scale(${k})" d="${MARK_PETAL}"/>`,
+      (r) =>
+        `<g class="pt" transform="rotate(${r} 50 50)"><path fill="url(#bg1)" d="${MARK_PETAL}"/></g>`,
     )
-    .join(
-      "",
-    )}</g><circle r="12.5" fill="#ff6a8c"/><circle cx="-3.5" cy="-3.5" r="4" fill="#ffc4d1"/></svg>`;
+    .join("")}<path class="star" fill="#fff" d="${MARK_STAR}"/></svg>`;
+// Header/footer/booking lockup: flower mark + live "cultivar+" wordmark.
+const brandLockup = (cls = "brand") =>
+  `<span class="${cls}"><span class="wm" role="img" aria-label="Cultivar+"></span></span>`;
+// Only show photos from our own avatars bucket. Profiles can be edited through the API
+// directly, so a stored URL could point anywhere (e.g. a tracking pixel) unless checked here.
+const AVATAR_PREFIX = `${CFG.supabaseUrl}/storage/v1/object/public/avatars/`;
+const safePhoto = (u) => (typeof u === "string" && u.startsWith(AVATAR_PREFIX) ? u : "");
 const av = (t, c = "av") =>
-  t.photo
-    ? `<img class="${c} ph" src="${esc(t.photo)}" alt="${esc(t.name)}">`
+  safePhoto(t.photo)
+    ? `<img class="${c} ph" src="${esc(safePhoto(t.photo))}" alt="${esc(t.name)}" width="${c.includes("big") ? 120 : 68}" height="${c.includes("big") ? 120 : 68}" decoding="async"${c.includes("big") ? "" : ' loading="lazy"'}>`
     : `<div class="${c}" aria-hidden="true">${esc(t.name[0])}</div>`;
 const tags = (a) =>
   `<div class="tags">${a.map((s) => `<span class="tag">${esc(s)}</span>`).join("")}</div>`;
@@ -1013,7 +1013,7 @@ let route = "home",
 function nav() {
   const m = me();
   $("#nv").innerHTML =
-    `<a class="l" href="#home">Home</a><a class="l" href="#tutors">Tutors</a><a class="l" href="#faq" data-scroll="faq">FAQ</a>${m ? `<a class="l" href="#${m.role === "admin" ? "admin" : "account"}">Dashboard</a><a class="l" href="#home" id="lo">Log out</a>` : `<a class="l" href="#login">Log in</a>`}<a class="btn sm" href="#book" data-track="book">Book a Session</a>`;
+    `<div class="nl"><a class="l" href="#home">Home</a><a class="l" href="#tutors">Tutors</a><a class="l" href="#faq" data-scroll="faq">FAQ</a>${m ? `<a class="l" href="#${m.role === "admin" ? "admin" : "account"}">Dashboard</a>` : ""}</div><div class="nr">${m ? `<a class="l" href="#home" id="lo">Log out</a>` : `<a class="l" href="#login">Log in</a><a class="l" href="#signup">Create an account</a>`}<a class="btn sm" href="#book" data-track="book">Book a Session</a></div>`;
   $("#lo")?.addEventListener("click", async (e) => {
     e.preventDefault();
     resetSession(); // clear first so the auth listener ignores our own sign-out
@@ -1060,14 +1060,33 @@ async function ensure(r) {
     jobs.push(shared("adm", loadAdmin));
   if (jobs.length) await Promise.all(jobs);
 }
+let navd = false;
+function focusHeading(root) {
+  const el = root?.querySelector("h1, h2") || root;
+  if (!el) return;
+  if (!el.hasAttribute("tabindex")) el.setAttribute("tabindex", "-1");
+  el.focus({ preventScroll: true });
+}
+// Read / write the "?a=b" part of the hash (used for shareable filter state).
+const hashQuery = () => new URLSearchParams(location.hash.split("?")[1] || "");
+function setHashQuery(base, params) {
+  const q = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v),
+  ).toString();
+  history.replaceState(null, "", "#" + base + (q ? "?" + q : ""));
+}
 async function go() {
   const tok = ++navTok;
-  const h = location.hash.slice(1) || "home";
+  // "#tutors?subject=Biology" → route "tutors"; the query is read by the page itself.
+  const h = location.hash.slice(1).split("?")[0] || "home";
   let r = h;
   arg = null;
   if (h.startsWith("tutor-")) {
     r = "profile";
     arg = h.slice(6);
+  } else if (/^book-\d$/.test(h)) {
+    r = "book";
+    arg = +h.slice(5);
   }
   const R = {
     home,
@@ -1111,6 +1130,10 @@ async function go() {
     a.classList.add("in");
   }
   window.scrollTo(0, 0);
+  // Tell keyboard and screen-reader users the page changed: move focus to its heading.
+  // Skipped on the first load so the browser's normal start position is kept.
+  if (navd) focusHeading($("#app"));
+  navd = true;
   document.title =
     ({
       book: "Book a Session",
@@ -1126,6 +1149,13 @@ async function go() {
     (r === "home" ? "" : " | Cultivar+");
 }
 addEventListener("hashchange", go);
+// Skip link: "#app" isn't a route, so focus the content instead of following the hash.
+document.addEventListener("click", (e) => {
+  if (!e.target.closest?.(".skip")) return;
+  e.preventDefault();
+  focusHeading($("#app"));
+  $("#app").scrollIntoView();
+});
 document.addEventListener("click", (e) => {
   const a = e.target.closest("[data-track]");
   if (a) track(a.dataset.track + "_click");
@@ -1306,11 +1336,6 @@ const WHY_ICON = [
   '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5"/></svg>',
 ];
 const HELP_SUBJ = { "Other high school subjects": "Other subjects" };
-let pendingSubj = null; // set by a subject link, read once by tutors()
-document.addEventListener("click", (e) => {
-  const a = e.target.closest?.("[data-subj]");
-  if (a) pendingSubj = a.dataset.subj;
-});
 // The last group ("Beyond the classroom") is something every tutor offers, so it isn't a filter.
 function helpCard(h, items, gi, T) {
   const beyond = gi === C.help.length - 1;
@@ -1319,7 +1344,7 @@ function helpCard(h, items, gi, T) {
       if (beyond) return `<li><span class="hl-name">${i}</span></li>`;
       const subj = HELP_SUBJ[i] || i,
         n = T.filter((t) => t.subjects.includes(subj)).length;
-      return `<li><a class="hl-link" href="#tutors" data-subj="${esc(subj)}"><span class="hl-name">${i}</span><span class="hl-meta">${n ? `${n} tutor${n > 1 ? "s" : ""}` : ""}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></a></li>`;
+      return `<li><a class="hl-link" href="#tutors?subject=${encodeURIComponent(subj)}"><span class="hl-name">${i}</span><span class="hl-meta">${n ? `${n} tutor${n > 1 ? "s" : ""}` : ""}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></span></a></li>`;
     })
     .join("");
   return `<div class="hcard${beyond ? " beyond" : ""}"><h3 class="hc-top">${h}</h3>${beyond ? '<p class="hc-note">Ask any tutor. It comes with every session.</p>' : ""}<ul>${rows}</ul></div>`;
@@ -1333,14 +1358,14 @@ function home() {
     .map((w, i) => `<span class="w" style="--i:${i}">${w}</span>`)
     .join(
       " ",
-    )}</h1><p class="sub">${C.sub}</p><div class="row"><a class="btn" href="#tutors">Meet our tutors</a><a class="btn alt" href="#book" data-track="book">Book a Session</a></div><p class="hnote">${C.note.map((n, i, a) => `<span class="hn-item${i ? "" : " hn-price"}">${n}${i < a.length - 1 ? `<span class="sep" aria-hidden="true">·</span>` : ""}</span>`).join(" ")}</p><p class="intro">${C.intro}</p></div><div class="uwrap"><aside class="unis" aria-labelledby="uh"><div class="uhd"><h2 id="uh">Where our tutors study</h2><p>Across Ontario, from London to Ottawa.</p></div><ul class="logos" aria-label="Universities">${C.unis.map(([n, c, sl], i) => `<li style="--i:${i}" title="${n}, ${c}"><span class="ulogo"><img class="m" src="assets/unis/mono/${sl}.png" alt="${n}" decoding="async" onload="logoFit(this)" onerror="this.closest('li').classList.add('nologo');this.parentNode.remove()"><img class="c" src="assets/unis/${sl}.png" alt="" aria-hidden="true" decoding="async" loading="lazy"></span><span class="ln">${n}<small>${c}</small></span></li>`).join("")}</ul></aside></div></div></section>
+    )}</h1><p class="sub">${C.sub}</p><div class="row"><a class="btn" href="#tutors">Meet our tutors</a><a class="btn alt" href="#book" data-track="book">Book a Session</a></div><p class="hnote">${C.note.map((n, i, a) => `<span class="hn-item${i ? "" : " hn-price"}">${n}${i < a.length - 1 ? `<span class="sep" aria-hidden="true">·</span>` : ""}</span>`).join(" ")}</p><p class="intro">${C.intro}</p></div><div class="uwrap"><aside class="unis" aria-labelledby="uh"><div class="uhd"><h2 id="uh">Where our tutors study</h2><p>Across Ontario, from London to Ottawa.</p></div><ul class="logos" aria-label="Universities">${C.unis.map(([n, c, sl], i) => `<li style="--i:${i}" title="${n}, ${c}"><span class="ulogo"><img class="c" src="assets/unis/light/${sl}.png" alt="${n}" decoding="async" onload="logoFit(this)" onerror="this.closest('li').classList.add('nologo');this.parentNode.remove()"></span><span class="ln">${n}<small>${c}</small></span></li>`).join("")}</ul></aside></div></div></section>
 <section id="tutors-sec"><div class="wrap"><h2 class="center">Choose a mentor, not just a tutor</h2><p class="mut center">Pick by subject, university, program or personality. Every tutor is a real university student.</p><div class="tg" style="margin-top:36px">${T.length ? T.slice(0, 6).map(tcard).join("") : '<p class="mut center">New tutors are joining soon.</p>'}</div><p class="center" style="margin-top:32px"><a class="btn alt" href="#tutors">Browse all tutors</a></p></div></section>
 <section class="about"><div class="wrap"><h2>How it works</h2><div class="steps four"><div><h3>Browse tutors</h3><p class="mut">Filter by subject, university and interests.</p></div><div><h3>Read a profile</h3><p class="mut">Meet the person behind the subject.</p></div><div><h3>Book a time</h3><p class="mut">See live availability and pick a slot.</p></div><div><h3>Pay and learn</h3><p class="mut">Pay by card after booking, then meet online.</p></div></div></div></section>
 <section class="helpsec"><div class="wrap"><h2 class="center">What we help with</h2><p class="mut center">Senior-level courses, plus the things school doesn’t always teach. Pick a subject to see who teaches it.</p><div class="help">${C.help.map(([h, items], gi) => helpCard(h, items, gi, T)).join("")}</div></div></section>
 <section class="why"><div class="wrap"><div class="why-head"><h2>Why a university student?</h2></div><ul class="why-list">${C.why.map(([h, p], i) => `<li><span class="why-mark" aria-hidden="true">${WHY_ICON[i]}</span><h3>${h}</h3><p>${p}</p></li>`).join("")}</ul></div></section>
-<section id="about" class="about"><div class="wrap split"><div><h2>Who we are</h2></div><div>${C.overview.map((p) => `<p>${p}</p>`).join("")}<h3 style="margin-top:28px">Our mission</h3>${C.mission.map((p) => `<p>${p}</p>`).join("")}</div></div></section>
-<section id="faq"><div class="wrap split"><h2>Common questions</h2><div>${C.faq.map((f) => `<details><summary>${f[0]}</summary><p>${f[1]}</p></details>`).join("")}</div></div></section>
-<section class="cta" id="contact"><div class="wrap"><div><h2>Ready to grow?</h2><p>Find the tutor who feels right and book in minutes.</p><div class="row"><a class="btn white" href="#tutors">Find a tutor</a></div><p style="margin-top:24px">${C.email}${/[1-9]/.test(C.phone || "") ? `<br>${C.phone}` : ""}</p></div>
+<section id="about" class="about"><div class="wrap split"><div><h2>Our mission</h2></div><div>${C.mission.map((p) => `<p>${p}</p>`).join("")}</div></div></section>
+<section id="faq"><div class="wrap split"><h2>Frequently asked questions</h2><div>${C.faq.map((f) => `<details><summary>${f[0]}</summary><p>${f[1]}</p></details>`).join("")}</div></div></section>
+<section class="cta" id="contact"><div class="orbit" aria-hidden="true"><span class="ring r1"></span><span class="ring r2"></span><span class="spin">${[0, 1, 2, 3, 4].map((i) => `<img src="assets/cultivar-mark.svg" alt="" style="--a:${i * 72 + 18}deg">`).join("")}</span></div><div class="wrap"><div class="cta-copy"><h2>Ready to grow?</h2><p>Find the tutor who feels right and book in minutes.</p><div class="row"><a class="btn white" href="#tutors">Find a tutor</a></div><p class="cta-mail">Or write to us: <a href="mailto:${C.email}">${C.email}</a>${/[1-9]/.test(C.phone || "") ? ` · ${C.phone}` : ""}</p></div>
 <form id="cf" novalidate><label for="cn">Name</label><input id="cn"><label for="ce">Email</label><input id="ce" type="email"><label for="cm">Message</label><textarea id="cm" rows="4"></textarea><p class="err" id="cerr" role="alert"></p><button class="btn">Send message</button></form></div></section>`;
   fx();
   uniHover();
@@ -1400,11 +1425,26 @@ function tutors() {
       : "<p>No tutors match yet. Try clearing a filter.</p>";
     fx();
   };
-  ["q", "fs", "fu"].forEach((i) => ($("#" + i).oninput = draw));
-  if (pendingSubj) {
-    $("#fs").value = pendingSubj;
-    pendingSubj = null;
-  }
+  // Filters live in the URL (#tutors?q=…&subject=…&uni=…) so they survive a refresh
+  // and can be shared. replaceState: typing shouldn't fill the Back history.
+  const qp = hashQuery(),
+    setSel = (el, v) => {
+      if (v && [...el.options].some((o) => o.value === v)) el.value = v;
+    };
+  $("#q").value = qp.get("q") || "";
+  setSel($("#fs"), qp.get("subject"));
+  setSel($("#fu"), qp.get("uni"));
+  ["q", "fs", "fu"].forEach(
+    (i) =>
+      ($("#" + i).oninput = () => {
+        setHashQuery("tutors", {
+          q: $("#q").value.trim(),
+          subject: $("#fs").value,
+          uni: $("#fu").value,
+        });
+        draw();
+      }),
+  );
   draw();
 }
 function profile() {
@@ -1672,14 +1712,26 @@ let st = {
 };
 function side() {
   const t = st.tutor && tut(st.tutor);
-  return `<aside class="side"><img src="assets/cultivar_wordmark_white.png" alt="Cultivar+"><h3>Tutoring session</h3>${t ? `<div class="mini">${av(t, "av sm")}<div><b>${esc(t.name)}</b><br><small>${esc(t.uni)}</small></div></div>` : ""}<dl><dt>Duration</dt><dd>${S().len} minutes</dd>${t ? `<dt>Price</dt><dd>${money(price(t))}</dd>` : ""}${st.subject ? `<dt>Subject</dt><dd>${esc(st.subject)}${st.grade ? ", " + gl(st.grade) : ""}</dd>` : ""}${st.slot ? `<dt>When</dt><dd>${fmt(st.slot, st.tz, { weekday: "long", month: "long", day: "numeric" })}<br>${tm(st.slot, st.tz)}</dd>` : ""}<dt>Time zone</dt><dd>${esc(st.tz)}</dd></dl></aside>`;
+  return `<aside class="side">${brandLockup("brand side-brand")}<h3>Tutoring session</h3>${t ? `<div class="mini">${av(t, "av sm")}<div><b>${esc(t.name)}</b><br><small>${esc(t.uni)}</small></div></div>` : ""}<dl><dt>Duration</dt><dd>${S().len} minutes</dd>${t ? `<dt>Price</dt><dd>${money(price(t))}</dd>` : ""}${st.subject ? `<dt>Subject</dt><dd>${esc(st.subject)}${st.grade ? ", " + gl(st.grade) : ""}</dd>` : ""}${st.slot ? `<dt>When</dt><dd>${fmt(st.slot, st.tz, { weekday: "long", month: "long", day: "numeric" })}<br>${tm(st.slot, st.tz)}</dd>` : ""}<dt>Time zone</dt><dd>${esc(st.tz)}</dd></dl></aside>`;
 }
 const prog = () =>
   `<div class="prog" aria-label="Progress">${["Tutor", "Time", "Details", "Payment", "Done"].map((n, i) => `<span class="${i + 1 === st.step ? "on" : i + 1 < st.step ? "done" : ""}" ${i + 1 === st.step ? 'aria-current="step"' : ""}>${n}</span>`).join("")}</div>`;
 function book() {
   track("book_view");
   const m = me();
-  if (st.step === 5 && route === "book" && !st._keep)
+  // #book-N (browser Back/Forward, refresh): go to that step only if the earlier steps
+  // are done; otherwise the furthest one that is. Once booked, never reopen "Confirm".
+  if (arg) {
+    const max = !(st.tutor && st.subject && st.grade)
+      ? 1
+      : !st.slot
+        ? 2
+        : !st.ref
+          ? 3
+          : 5;
+    st.step = Math.min(Math.max(arg, st.ref ? 4 : 1), max);
+  } else if (st.ref) {
+    // Plain #book after finishing a booking starts a new one (same tutor preselected).
     Object.assign(st, {
       step: 1,
       subject: null,
@@ -1689,6 +1741,7 @@ function book() {
       ref: null,
       notes: "",
     });
+  } else st.step = 1; // plain #book is step 1; earlier choices stay selected
   st._keep = 0;
   if (m && m.role !== "student") {
     $("#app").innerHTML =
@@ -1701,10 +1754,18 @@ function book() {
   }
   $("#app").innerHTML =
     `<section class="book"><div class="wrap"><h1>Book a session</h1><div class="bk">${side()}<div class="main">${prog()}<div id="bs"></div></div></div></div></section>`;
-  step();
+  step(true);
 }
-function step() {
+// fromRoute: the router is already showing this URL, so only correct it (replace);
+// a step change inside the page adds a history entry so Back returns to it.
+function step(fromRoute) {
   clearInterval(st.h);
+  const want = st.step > 1 ? "#book-" + st.step : "#book",
+    moved = !fromRoute && location.hash !== want;
+  if (location.hash !== want) {
+    if (fromRoute) history.replaceState(null, "", want);
+    else history.pushState(null, "", want);
+  }
   $(".side").outerHTML = side();
   $(".prog").outerHTML = prog();
   const b = $("#bs");
@@ -1713,6 +1774,7 @@ function step() {
   b.classList.add("enter");
   [0, s1, s2, s3, s4, s5][st.step]();
   window.scrollTo({ top: 0 });
+  if (moved) focusHeading($("#bs"));
 }
 function s1() {
   const T = allTutors(),
@@ -1836,7 +1898,7 @@ function s3() {
     t = tut(st.tutor);
   if (!m) {
     $("#bs").innerHTML =
-      `<h2>Log in to continue</h2><p>Create a free student account or log in to confirm this booking. Your tutor and time are saved.</p><div class="row"><a class="btn" href="#signup" onclick="sessionStorage.cvnext='book'">Create account</a><a class="btn alt" href="#login" onclick="sessionStorage.cvnext='book'">Log in</a></div><div class="nav2"><button class="btn alt" id="bk">Back</button><span></span></div>`;
+      `<h2>Log in to continue</h2><p>Create a free student account or log in to confirm this booking. Your tutor and time are saved.</p><div class="row"><a class="btn" href="#signup" onclick="sessionStorage.cvnext='book-3'">Create account</a><a class="btn alt" href="#login" onclick="sessionStorage.cvnext='book-3'">Log in</a></div><div class="nav2"><button class="btn alt" id="bk">Back</button><span></span></div>`;
     $("#bk").onclick = () => {
       st.step = 2;
       step();
@@ -1899,8 +1961,9 @@ function s3() {
   };
 }
 function payBtns(b) {
+  // Re-check the tutor's link here: it's stored data, and a javascript: URL in an href would run.
   const t = tut(b.tutor),
-    link = t?.payLink || CFG.stripeLink;
+    link = [t?.payLink, CFG.stripeLink].find((l) => l && PAY_LINK_RE.test(l)) || "";
   if (b.paid === "paid") return '<span class="badge ok">Paid</span>';
   if (b.paid === "review")
     return '<span class="badge">Payment awaiting confirmation</span>';
@@ -2122,7 +2185,7 @@ function account() {
     wire();
   }
   if (tab === "avail") {
-    el.innerHTML = `<p>Set your weekly hours (24h clock, ${esc(S().tz)}). Leave blank on days you're off. Students only see times inside these hours.</p><div class="grid">${DOW.map((n, i) => `<div class="card"><h3>${n}</h3><label>From</label><input type="number" min="0" max="23" data-h="${i}0" value="${m.avail?.[i]?.[0] ?? ""}"><label>To</label><input type="number" min="1" max="24" data-h="${i}1" value="${m.avail?.[i]?.[1] ?? ""}"></div>`).join("")}</div><button class="btn" id="sv" style="margin-top:18px">Save hours</button><h3 style="margin-top:32px">Days off</h3><div class="row"><input type="date" id="bd" style="width:auto"><button class="btn alt sm" id="bl">Block this date</button></div><div class="tags" style="margin-top:12px">${(m.blocked || []).map((d) => `<button class="tag x" data-u="${d}" aria-label="Remove ${d}">${d} ×</button>`).join("") || '<span class="mut">None</span>'}</div>`;
+    el.innerHTML = `<p>Set your weekly hours (24h clock, ${esc(S().tz)}). Leave blank on days you're off. Students only see times inside these hours.</p><div class="grid">${DOW.map((n, i) => `<div class="card"><h3 id="dw${i}">${n}</h3><label for="h${i}0">From</label><input id="h${i}0" type="number" inputmode="numeric" min="0" max="23" data-h="${i}0" aria-describedby="dw${i}" value="${m.avail?.[i]?.[0] ?? ""}"><label for="h${i}1">To</label><input id="h${i}1" type="number" inputmode="numeric" min="1" max="24" data-h="${i}1" aria-describedby="dw${i}" value="${m.avail?.[i]?.[1] ?? ""}"></div>`).join("")}</div><button class="btn" id="sv" style="margin-top:18px">Save hours</button><h3 style="margin-top:32px"><label for="bd" style="font:inherit;margin:0">Days off</label></h3><div class="row"><input type="date" id="bd" style="width:auto"><button class="btn alt sm" id="bl">Block this date</button></div><div class="tags" style="margin-top:12px">${(m.blocked || []).map((d) => `<button class="tag x" data-u="${d}" aria-label="Remove ${d}">${d} ×</button>`).join("") || '<span class="mut">None</span>'}</div>`;
     $("#sv").onclick = async () => {
       const h = {};
       for (let i = 0; i < 7; i++) {
@@ -2130,7 +2193,11 @@ function account() {
           b = $(`[data-h="${i}1"]`).value;
         h[i] = a !== "" && b !== "" && +b > +a ? [+a, +b] : null;
       }
-      if (await saveMine({ avail: h })) $("#sv").textContent = "Saved ✓";
+      if (await saveMine({ avail: h })) {
+        const sv = $("#sv");
+        sv.textContent = "Saved ✓";
+        setTimeout(() => sv.isConnected && (sv.textContent = "Save hours"), 2500);
+      }
     };
     $("#bl").onclick = async () => {
       const d = $("#bd").value;
@@ -2168,12 +2235,12 @@ function account() {
       const chk = readTutor(cur.photo || "");
       const miss = tutorProblem(chk, $("#nm").value);
       if (miss) {
-        er.style.color = "#b00020";
+        er.style.color = "";
         er.textContent = miss;
         return;
       }
       if (chk.payLink && !PAY_LINK_RE.test(chk.payLink)) {
-        er.style.color = "#b00020";
+        er.style.color = "";
         er.textContent =
           "Your payment link must be a Stripe link starting with https://buy.stripe.com/";
         return;
@@ -2198,7 +2265,7 @@ function account() {
       });
       if (ok) {
         profileFile = null;
-        er.style.color = "#0a7a3d";
+        er.style.color = "var(--ok)";
         er.textContent = "Saved ✓";
       } else er.textContent = "";
     };
