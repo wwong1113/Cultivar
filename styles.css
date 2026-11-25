@@ -4887,3 +4887,27 @@ body > header,
 body > footer {
   flex-shrink: 0;
 }
+
+/* ===== "What we help with": three cards in one even row =====
+   Three columns down to tablet width (two would strand the third card on its own
+   row), then a single stack on phones. */
+.help {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  max-width: 1040px;
+  margin-inline: auto;
+}
+
+@media (max-width: 1000px) {
+  .help {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
+
+@media (max-width: 720px) {
+  .help {
+    grid-template-columns: 1fr;
+    max-width: 520px;
+  }
+}

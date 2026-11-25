@@ -75,6 +75,10 @@ function authMsg(e) {
     return "This account is suspended. Please contact Cultivar+.";
   if (m.includes("already registered") || m.includes("already been registered"))
     return "That email already has an account. Try logging in.";
+  // Supabase's email sender has a project-wide hourly cap, so this can hit a
+  // first-time visitor. It is not about this person's attempts.
+  if (m.includes("email rate limit") || m.includes("over_email_send_rate"))
+    return "We couldn't send your confirmation email right now because a lot of people are signing up. Please try again in a little while, or contact Cultivar+.";
   if (e?.status === 429 || m.includes("rate limit"))
     return "Too many attempts. Please wait a minute and try again.";
   return e?.message || "Something went wrong. Please try again.";
@@ -214,10 +218,6 @@ const C = {
       ],
     ],
     ["Sciences", ["Grade 9–10 Science", "Biology", "Chemistry", "Physics"]],
-    [
-      "English & Business",
-      ["English", "Business", "Economics", "Other high school subjects"],
-    ],
     [
       "Beyond the classroom",
       [
@@ -512,6 +512,12 @@ const DEF = {
 };
 const S = () => ({ ...DEF, ...DB.settings, link: DB.link || DEF.link });
 
+// "loves coffee" -> "Loves Coffee" (keeps acronyms like "AI" or "STEM" as typed).
+const capWords = (x) =>
+  x
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/(^|[\s\-\/(])(\p{L})/gu, (_, a, b) => a + b.toUpperCase());
 const mapProfile = (p) => ({
   id: p.id,
   role: p.role,
@@ -525,7 +531,7 @@ const mapProfile = (p) => ({
   subjects: (p.subjects || []).map((s) =>
     s === "English / Writing" ? "English" : s,
   ),
-  vibe: p.vibe || [],
+  vibe: (p.vibe || []).map(capWords),
   bio: p.bio || "",
   photo: p.photo || "",
   rate: p.rate == null ? undefined : +p.rate,
@@ -704,12 +710,33 @@ function resetSession() {
 async function saveMine(patch) {
   const cur = me();
   if (!cur || cur.role === "admin") return false;
-  const { error } = await sb.from("profiles").update(patch).eq("id", cur.id);
+  // .select() returns the row as the database actually stored it. Without it, an update
+  // that matched no row (or was undone by a trigger) looks like a success.
+  const { data, error } = await sb
+    .from("profiles")
+    .update(patch)
+    .eq("id", cur.id)
+    .select();
   if (error) {
     alert("Could not save: " + error.message);
     return false;
   }
+  const row = data?.[0];
+  const same = (a, b) =>
+    JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+  const lost = row
+    ? ["avail", "blocked"].filter((k) => k in patch && !same(row[k], patch[k]))
+    : Object.keys(patch);
   await Promise.all([refreshMe(), loadPublic()]);
+  if (lost.length) {
+    console.error("Save not stored", { patch, row });
+    alert(
+      "Could not save: the database didn't keep your changes (" +
+        lost.join(", ") +
+        "). Please contact Cultivar+.",
+    );
+    return false;
+  }
   return true;
 }
 // Admin-only actions that need the service key live in the "admin-users" Edge Function.
@@ -1570,7 +1597,7 @@ function readTutor(existingPhoto = "") {
     subjects: sj,
     vibe: $("#vb")
       .value.split(",")
-      .map((x) => x.trim())
+      .map(capWords)
       .filter(Boolean),
     bio: $("#bi").value.trim(),
     photo: existingPhoto || "",
@@ -1652,6 +1679,7 @@ function signup() {
       });
       er.style.color = "";
       if (error) {
+        console.warn("Signup error:", error.status, error.code, error.message);
         er.textContent = authMsg(error);
         return;
       }
