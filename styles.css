@@ -4469,7 +4469,7 @@ footer a:focus-visible {
 
 /* --- breathing room above the hero headline and university panel --- */
 .hero {
-  padding-top: clamp(72px, 9vw, 128px);
+  padding-top: clamp(48px, 7.2vw, 72px);
 }
 
 /* --- closing band: periwinkle light at the top sinking into deep navy, into a navy footer --- */
@@ -4817,5 +4817,54 @@ header .brand .wm {
   }
   header nav#nv .nl {
     display: none;
+  }
+}
+
+/* ===== FAQ -> contact: one long, eased fade instead of a hard edge =====
+   The FAQ section's lower half quietly picks up the periwinkle, and the contact band
+   starts at exactly that colour, so there is no visible seam between them. */
+#faq {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(182, 197, 255, 0.12) 55%,
+    rgba(182, 197, 255, 0.35) 70%,
+    rgba(182, 197, 255, 0.7) 86%,
+    #b6c5ff 100%
+  );
+}
+
+#contact.cta {
+  margin-top: 0;
+  background:
+    radial-gradient(55% 30% at 50% 24%, rgba(178, 252, 255, 0.22), transparent 70%),
+    linear-gradient(
+      180deg,
+      #b6c5ff 0%,
+      #9bb1ff 7%,
+      #7b97ff 15%,
+      #5f80f5 24%,
+      #3f5ddc 36%,
+      #2b3ea8 50%,
+      #1e2a7a 64%,
+      #141b52 80%,
+      #0b1030 100%
+    );
+}
+
+/* ===== Hero: the logo panel ends where the left-hand text ends =====
+   On two-column layouts the panel no longer sets the row height; the text column does,
+   and the logo rows share whatever height that leaves (logoFit() resizes each logo). */
+@media (min-width: 901px) {
+  .hero .uwrap {
+    contain: size;
+  }
+  .hero .uwrap .unis {
+    height: 100%;
+  }
+  .hero .logos {
+    grid-auto-rows: minmax(0, 1fr);
+    grid-template-rows: none;
   }
 }
