@@ -4868,3 +4868,22 @@ header .brand .wm {
     grid-template-rows: none;
   }
 }
+
+/* ===== Short pages: keep the footer on the bottom edge of the window =====
+   On pages shorter than the screen (a filtered tutor list, login, legal pages) the
+   content area grows so no strip of page background shows under the footer. */
+body {
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+body > main {
+  flex: 1 0 auto;
+}
+
+body > header,
+body > footer {
+  flex-shrink: 0;
+}
