@@ -50,7 +50,6 @@ const CFG = {
   // (the price always comes from the database, never from the browser).
   checkoutUrl:
     "https://tginxgkjvhwjzhovbqvi.supabase.co/functions/v1/create-checkout",
-  stripeLink: "",
 };
 // Supabase client (needs the supabase-js script tag in index.html)
 // PKCE keeps the email-confirmation redirect in ?code= so it doesn't clash with the #hash router.
@@ -66,7 +65,6 @@ const sb = window.supabase?.createClient
   : null;
 const AUTH = { busy: 0 };
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
-const PAY_LINK_RE = /^https:\/\/(buy|donate)\.stripe\.com\/[^\s"<>]*$/;
 
 function authMsg(e) {
   const m = String(e?.message || "").toLowerCase();
@@ -167,7 +165,7 @@ const C = {
   tagline: "Learn from someone who’s been where you are.",
   sub: "Personalized Grade 9–12 tutoring from university students who understand the courses.",
   // one-line summary under the hero buttons; the first item is emphasized
-  note: ["$40/hour", "1-on-1 tutoring", "University student tutors"],
+  note: ["$40/hour", "1-on-1 online tutoring", "University student tutors"],
   // Hero "Where our tutors study" logo wall: [name, city, logo file slug].
   // Logos load from assets/unis/light/<slug>.png and logoFit() sizes each one from its
   // own shape. Until a file exists, its tile shows the name instead.
@@ -533,7 +531,6 @@ const mapProfile = (p) => ({
   ),
   vibe: p.vibe || [],
   bio: p.bio || "",
-  payLink: p.pay_link || "",
   photo: p.photo || "",
   rate: p.rate == null ? undefined : +p.rate,
   avail: p.avail || {},
@@ -1203,8 +1200,8 @@ function privacy() {
         "What we collect",
         `<ul>
 <li><b>Everyone with an account:</b> your name, email address and password. Passwords are stored in a scrambled (hashed) form; we can’t read them.</li>
-<li><b>Students:</b> your grade, and for each booking the tutor, subject, date and time, session format (online or in person), any notes you add, and whether the session has been paid.</li>
-<li><b>Tutors:</b> your university, program and year, the subjects you tutor, your interests, a short bio, a profile photo, your hourly rate, your weekly availability and days off, and an optional Stripe payment link.</li>
+<li><b>Students:</b> your grade, and for each booking the tutor, subject, date and time, any notes you add, and whether the session has been paid.</li>
+<li><b>Tutors:</b> your university, program and year, the subjects you tutor, your interests, a short bio, a profile photo, your hourly rate, and your weekly availability and days off.</li>
 <li><b>Contact form:</b> the name, email and message you send us.</li>
 <li><b>Usage counts:</b> we count a few anonymous events (for example, how many times the home page is viewed or the Book button is clicked). These counts aren’t linked to you or your account.</li>
 </ul>
@@ -1529,7 +1526,7 @@ const tutorFields = (t) =>
     `<label for="un">University</label><input id="un" list="dl-uni" autocomplete="off" value="${esc(t.uni)}" placeholder="Start typing, e.g. UofT or Western"><datalist id="dl-uni">${UNIS.map(([n]) => `<option value="${esc(n)}">`).join("")}</datalist><div class="two"><div><label for="pr">Program</label><input id="pr" list="dl-prog" autocomplete="off" value="${esc(prog)}" placeholder="e.g. Life Sciences"><datalist id="dl-prog">${PROGRAMS.map(([n]) => `<option value="${esc(n)}">`).join("")}</datalist></div><div><label for="yr">Year</label><select id="yr"><option value="">Select…</option>${YEARS.map((y) => `<option ${y === yr ? "selected" : ""}>${y}</option>`).join("")}</select></div></div>`)(
     splitProgram(t.program),
   ) +
-  `<fieldset class="fs"><legend>Subjects you tutor</legend>${C.subjects.map((s) => `<label class="chk"><input type="checkbox" name="sj" value="${s}" ${t.subjects?.includes(s) ? "checked" : ""}><span>${s}</span></label>`).join("")}</fieldset><label for="vb">Personality and interests (comma separated)</label><input id="vb" value="${esc((t.vibe || []).join(", "))}" placeholder="Patient, chess club, loves coffee"><label for="bi">Short bio</label><textarea id="bi" rows="4" maxlength="400">${esc(t.bio)}</textarea><label for="ph">Profile photo</label><input id="ph" type="file" accept="image/*"><label for="pl">Your Stripe Payment Link (optional)</label><input id="pl" value="${esc(t.payLink || "")}" placeholder="https://buy.stripe.com/...">`;
+  `<fieldset class="fs"><legend>Subjects you tutor</legend>${C.subjects.map((s) => `<label class="chk"><input type="checkbox" name="sj" value="${s}" ${t.subjects?.includes(s) ? "checked" : ""}><span>${s}</span></label>`).join("")}</fieldset><label for="vb">Personality and interests (comma separated)</label><input id="vb" value="${esc((t.vibe || []).join(", "))}" placeholder="Patient, chess club, loves coffee"><label for="bi">Short bio</label><textarea id="bi" rows="4" maxlength="400">${esc(t.bio)}</textarea><label for="ph">Profile photo</label><input id="ph" type="file" accept="image/*">`;
 
 // Checks every required tutor field, outlines the empty ones, and returns a message
 // naming what's missing ("" when the form is complete). Pass name to check #nm too.
@@ -1580,7 +1577,6 @@ function readTutor(existingPhoto = "") {
       .map((x) => x.trim())
       .filter(Boolean),
     bio: $("#bi").value.trim(),
-    payLink: $("#pl").value.trim(),
     photo: existingPhoto || "",
   };
 }
@@ -1633,18 +1629,12 @@ function signup() {
         er.textContent = miss;
         return;
       }
-      if (t.payLink && !PAY_LINK_RE.test(t.payLink)) {
-        er.textContent =
-          "Your payment link must be a Stripe link starting with https://buy.stripe.com/";
-        return;
-      }
       Object.assign(meta, {
         uni: t.uni,
         program: t.program,
         subjects: t.subjects,
         vibe: t.vibe,
         bio: t.bio,
-        pay_link: t.payLink,
       });
     }
     const lock = (v) =>
@@ -1707,7 +1697,6 @@ let st = {
   day: null,
   slot: null,
   notes: "",
-  fm: "Online",
   ref: null,
 };
 function side() {
@@ -1906,16 +1895,14 @@ function s3() {
     return;
   }
   $("#bs").innerHTML =
-    `<h2>Confirm your booking</h2><div class="card"><b>${esc(t.name)}</b> · ${esc(st.subject)}, ${gl(st.grade)}<br>${fmt(st.slot, st.tz, { weekday: "long", month: "long", day: "numeric" })}, ${tm(st.slot, st.tz)}<br>${money(price(t))} · you pay after booking</div><p class="mut" style="margin-top:12px">Booking as <b>${esc(m.name)}</b> (${esc(m.email)})</p><label for="fm">Session format</label><select id="fm"><option ${st.fm === "In person" ? "" : "selected"}>Online</option><option ${st.fm === "In person" ? "selected" : ""}>In person</option></select><label for="nt">What would you like help with? (optional)</label><textarea id="nt" rows="3">${esc(st.notes)}</textarea><p class="mut lg-note">Paid sessions cancelled ${LEGAL.refundDays}+ hours ahead are fully refunded. By confirming, you agree to our <a href="#terms" target="_blank">Terms of Service</a>.</p><p class="err" id="e" role="alert"></p><div class="nav2"><button class="btn alt" id="bk">Back</button><button class="btn" id="cf">Confirm booking</button></div>`;
+    `<h2>Confirm your booking</h2><div class="card"><b>${esc(t.name)}</b> · ${esc(st.subject)}, ${gl(st.grade)}<br>${fmt(st.slot, st.tz, { weekday: "long", month: "long", day: "numeric" })}, ${tm(st.slot, st.tz)} · online<br>${money(price(t))} · you pay after booking</div><p class="mut" style="margin-top:12px">Booking as <b>${esc(m.name)}</b> (${esc(m.email)})</p><label for="nt">What would you like help with? (optional)</label><textarea id="nt" rows="3">${esc(st.notes)}</textarea><p class="mut lg-note">Paid sessions cancelled ${LEGAL.refundDays}+ hours ahead are fully refunded. By confirming, you agree to our <a href="#terms" target="_blank">Terms of Service</a>.</p><p class="err" id="e" role="alert"></p><div class="nav2"><button class="btn alt" id="bk">Back</button><button class="btn" id="cf">Confirm booking</button></div>`;
   $("#bk").onclick = () => {
     st.notes = $("#nt").value;
-    st.fm = $("#fm").value;
     st.step = 2;
     step();
   };
   $("#cf").onclick = async () => {
     st.notes = $("#nt").value;
-    st.fm = $("#fm").value;
     const btn = $("#cf");
     $("#e").textContent = "";
     if (slotsFor(t).indexOf(st.slot) < 0) {
@@ -1932,7 +1919,7 @@ function s3() {
       p_subject: st.subject,
       p_grade: st.grade,
       p_start: new Date(st.slot).toISOString(),
-      p_format: st.fm,
+      p_format: "Online", // every session is online
       p_notes: st.notes,
       p_tz: st.tz,
     });
@@ -1961,17 +1948,12 @@ function s3() {
   };
 }
 function payBtns(b) {
-  // Re-check the tutor's link here: it's stored data, and a javascript: URL in an href would run.
-  const t = tut(b.tutor),
-    link = [t?.payLink, CFG.stripeLink].find((l) => l && PAY_LINK_RE.test(l)) || "";
   if (b.paid === "paid") return '<span class="badge ok">Paid</span>';
   if (b.paid === "review")
     return '<span class="badge">Payment awaiting confirmation</span>';
   if (CFG.checkoutUrl)
     return `<button class="btn" data-stripe="${b.id}">Pay ${money(b.amount)} with card</button>`;
-  return link
-    ? `<a class="btn" href="${esc(link)}${link.includes("?") ? "&" : "?"}client_reference_id=${b.id}&prefilled_email=${encodeURIComponent(b.email)}" data-pay="${b.id}">Pay ${money(b.amount)} with card</a>`
-    : `<button class="btn" data-demo="${b.id}">Pay ${money(b.amount)} (demo)</button>`;
+  return `<button class="btn" data-demo="${b.id}">Pay ${money(b.amount)} (demo)</button>`;
 }
 function bindPay(root, cb) {
   root.querySelectorAll("[data-stripe]").forEach(
@@ -2005,11 +1987,6 @@ function bindPay(root, cb) {
       }),
   );
   root
-    .querySelectorAll("[data-pay]")
-    .forEach((a) =>
-      a.addEventListener("click", () => LS.set("cv_paying", a.dataset.pay)),
-    );
-  root
     .querySelectorAll("[data-demo]")
     .forEach((a) => (a.onclick = () => setPaid(a.dataset.demo, "review", cb)));
 }
@@ -2030,7 +2007,7 @@ async function setPaid(id, v, cb) {
 function s4() {
   const b = B().find((x) => x.id === st.ref);
   $("#bs").innerHTML =
-    `<div class="done-wrap"><div class="okc" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><div class="burst" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></div><h2>You're booked. Now pay to lock it in.</h2><p>Reference <b>${b.id}</b>. Pay securely by credit card. ${CFG.checkoutUrl || CFG.stripeLink ? "" : '<span class="badge">Demo mode: no real payment is taken</span>'}</p><div class="row" id="pb">${payBtns(b)}<button class="btn alt" id="lt">Pay later</button></div><div id="pc"></div>`;
+    `<div class="done-wrap"><div class="okc" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><div class="burst" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></div><h2>You're booked. Now pay to lock it in.</h2><p>Reference <b>${b.id}</b>. Pay securely by credit card. ${CFG.checkoutUrl ? "" : '<span class="badge">Demo mode: no real payment is taken</span>'}</p><div class="row" id="pb">${payBtns(b)}<button class="btn alt" id="lt">Pay later</button></div><div id="pc"></div>`;
   const re = () => {
     if (
       B().find((x) => x.id === b.id).paid === "paid" ||
@@ -2054,7 +2031,7 @@ function s5() {
     z = (m) => new Date(m).toISOString().replace(/[-:]|\.\d{3}/g, "");
   const gc = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent("Cultivar+ with " + b.tutorName)}&dates=${z(b.start)}/${z(b.end)}&details=${encodeURIComponent(s.link)}`;
   $("#bs").innerHTML =
-    `<h2>All set!</h2><div class="card"><b>Reference:</b> ${b.id}<br><b>Tutor:</b> ${esc(b.tutorName)}<br><b>When:</b> ${fmt(b.start, st.tz, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}, ${tm(b.start, st.tz)} (${esc(st.tz)})<br><b>Subject:</b> ${esc(b.subject)}, ${gl(b.grade)}<br><b>${b.format === "Online" ? "Meeting link:" : "Location:"}</b> ${b.format === "Online" ? `<a href="${esc(s.link)}">${esc(s.link)}</a>` : "To be confirmed with your tutor"}<br><b>Payment:</b> ${b.paid === "paid" ? "Paid" : b.paid === "review" ? "Awaiting confirmation" : "Unpaid"}</div><div class="row" style="margin-top:20px" id="pb">${b.paid === "unpaid" ? payBtns(b) : ""}<a class="btn alt" href="${gc}" target="_blank" rel="noopener">Add to Google Calendar</a><button class="btn alt" id="ics">Download .ics</button><a class="btn alt" href="#account">My dashboard</a></div>`;
+    `<h2>All set!</h2><div class="card"><b>Reference:</b> ${b.id}<br><b>Tutor:</b> ${esc(b.tutorName)}<br><b>When:</b> ${fmt(b.start, st.tz, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}, ${tm(b.start, st.tz)} (${esc(st.tz)})<br><b>Subject:</b> ${esc(b.subject)}, ${gl(b.grade)}<br><b>Meeting link:</b> <a href="${esc(s.link)}">${esc(s.link)}</a><br><b>Payment:</b> ${b.paid === "paid" ? "Paid" : b.paid === "review" ? "Awaiting confirmation" : "Unpaid"}</div><div class="row" style="margin-top:20px" id="pb">${b.paid === "unpaid" ? payBtns(b) : ""}<a class="btn alt" href="${gc}" target="_blank" rel="noopener">Add to Google Calendar</a><button class="btn alt" id="ics">Download .ics</button><a class="btn alt" href="#account">My dashboard</a></div>`;
   bindPay($("#pb"), () => {
     st._keep = 1;
     s5();
@@ -2239,12 +2216,6 @@ function account() {
         er.textContent = miss;
         return;
       }
-      if (chk.payLink && !PAY_LINK_RE.test(chk.payLink)) {
-        er.style.color = "";
-        er.textContent =
-          "Your payment link must be a Stripe link starting with https://buy.stripe.com/";
-        return;
-      }
       let photoUrl = cur.photo || "";
       if (profileFile) {
         er.style.color = "var(--ink)";
@@ -2260,7 +2231,6 @@ function account() {
         subjects: t.subjects,
         vibe: t.vibe,
         bio: t.bio,
-        pay_link: t.payLink || null,
         photo: t.photo || null,
       });
       if (ok) {
@@ -2474,18 +2444,12 @@ function admin() {
             er.textContent = miss;
             return;
           }
-          if (t.payLink && !PAY_LINK_RE.test(t.payLink)) {
-            er.textContent =
-              "Payment link must be a Stripe link starting with https://buy.stripe.com/";
-            return;
-          }
           Object.assign(rec, {
             uni: t.uni,
             program: t.program,
             subjects: t.subjects,
             vibe: t.vibe,
             bio: t.bio,
-            pay_link: t.payLink || null,
           });
           const r = $("#rO").value;
           rec.rate = r === "" ? null : +r;
