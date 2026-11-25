@@ -3,7 +3,7 @@
 //
 // Deploy WITHOUT JWT verification (Stripe doesn't send one; we verify Stripe's signature):
 //   supabase functions deploy stripe-webhook --no-verify-jwt
-// Secrets needed: STRIPE_WEBHOOK_SECRET  (optional: CURRENCY=cad)
+// Secrets needed: STRIPE_WEBHOOK_SECRET (one whsec_ per endpoint, comma-separated for test + live)  (optional: CURRENCY=cad)
 // Stripe Dashboard -> Developers -> Webhooks -> add endpoint:
 //   https://<project-ref>.supabase.co/functions/v1/stripe-webhook
 //   events: checkout.session.completed, checkout.session.async_payment_succeeded
@@ -275,7 +275,12 @@ async function notifyBooking(admin: any, bookingId: string): Promise<boolean> {
 }
 // ---- end email notifications ----
 
-const SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "";
+// One or more Stripe signing secrets (whsec_...), comma-separated, so the test-mode and
+// live-mode endpoints can both point here. Stray spaces/newlines from pasting are ignored.
+const SECRETS = (Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 const CURRENCY = (Deno.env.get("CURRENCY") ?? "cad").toLowerCase();
 
 function safeEqual(a: string, b: string) {
@@ -285,7 +290,8 @@ function safeEqual(a: string, b: string) {
   return d === 0;
 }
 
-let HMAC_KEY: Promise<CryptoKey> | null = null;
+// The signing keys never change, so import them once per warm instance.
+let HMAC_KEYS: Promise<CryptoKey[]> | null = null;
 async function validSignature(
   payload: string,
   header: string,
@@ -300,34 +306,43 @@ async function validSignature(
   }
   if (!t || !v1.length || Math.abs(Date.now() / 1000 - Number(t)) > tolerance)
     return false;
-  // The signing key never changes, so import it once per warm instance.
-  const key = await (HMAC_KEY ??= crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(SECRET),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  ));
-  const mac = new Uint8Array(
-    await crypto.subtle.sign(
-      "HMAC",
-      key,
-      new TextEncoder().encode(`${t}.${payload}`),
+  const keys = await (HMAC_KEYS ??= Promise.all(
+    SECRETS.map((s) =>
+      crypto.subtle.importKey(
+        "raw",
+        new TextEncoder().encode(s),
+        { name: "HMAC", hash: "SHA-256" },
+        false,
+        ["sign"],
+      ),
     ),
-  );
-  const hex = [...mac].map((b) => b.toString(16).padStart(2, "0")).join("");
-  return v1.some((sig) => safeEqual(sig, hex));
+  ));
+  const signed = new TextEncoder().encode(`${t}.${payload}`);
+  for (const key of keys) {
+    const mac = new Uint8Array(await crypto.subtle.sign("HMAC", key, signed));
+    const hex = [...mac].map((b) => b.toString(16).padStart(2, "0")).join("");
+    if (v1.some((sig) => safeEqual(sig, hex))) return true;
+  }
+  return false;
 }
 
 Deno.serve(async (req) => {
   if (req.method !== "POST")
     return new Response("Method not allowed", { status: 405 });
-  if (!SECRET) return new Response("Webhook not configured", { status: 500 });
+  if (!SECRETS.length)
+    return new Response("Webhook not configured", { status: 500 });
 
   const payload = await req.text();
   if (
     !(await validSignature(payload, req.headers.get("stripe-signature") ?? ""))
   ) {
+    // Usually means STRIPE_WEBHOOK_SECRET doesn't include this endpoint's signing secret
+    // (e.g. only the test-mode one is set and a live event arrived). Never log the secret.
+    const live = /"livemode":\s*true/.test(payload);
+    console.error(
+      `Invalid Stripe signature for a ${live ? "LIVE" : "test"} event. ` +
+        `Add that mode's endpoint signing secret to STRIPE_WEBHOOK_SECRET (${SECRETS.length} configured).`,
+    );
     return new Response("Invalid signature", { status: 400 });
   }
 
