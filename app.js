@@ -817,6 +817,19 @@ const DOW = [
     "Saturday",
   ],
   gl = (g) => "Grade " + g;
+// Hour picker for tutor availability: stored as 0-24, shown as 12-hour time.
+const hourLabel = (h) =>
+  h === 0 || h === 24
+    ? "12:00 AM" + (h === 24 ? " (midnight)" : "")
+    : h === 12
+      ? "12:00 PM"
+      : (h % 12) + ":00 " + (h < 12 ? "AM" : "PM");
+const hourOpts = (from, to, cur) => {
+  let o = `<option value="" ${cur == null ? "selected" : ""}>Off</option>`;
+  for (let h = from; h <= to; h++)
+    o += `<option value="${h}" ${cur === h ? "selected" : ""}>${hourLabel(h)}</option>`;
+  return o;
+};
 function slotsFor(t) {
   const s = S(),
     now = Date.now(),
@@ -2186,13 +2199,21 @@ function account() {
     wire();
   }
   if (tab === "avail") {
-    el.innerHTML = `<p>Set your weekly hours (24h clock, ${esc(S().tz)}). Leave blank on days you're off. Students only see times inside these hours.</p><div class="grid">${DOW.map((n, i) => `<div class="card"><h3 id="dw${i}">${n}</h3><label for="h${i}0">From</label><input id="h${i}0" type="number" inputmode="numeric" min="0" max="23" data-h="${i}0" aria-describedby="dw${i}" value="${m.avail?.[i]?.[0] ?? ""}"><label for="h${i}1">To</label><input id="h${i}1" type="number" inputmode="numeric" min="1" max="24" data-h="${i}1" aria-describedby="dw${i}" value="${m.avail?.[i]?.[1] ?? ""}"></div>`).join("")}</div><button class="btn" id="sv" style="margin-top:18px">Save hours</button><h3 style="margin-top:32px"><label for="bd" style="font:inherit;margin:0">Days off</label></h3><div class="row"><input type="date" id="bd" style="width:auto"><button class="btn alt sm" id="bl">Block this date</button></div><div class="tags" style="margin-top:12px">${(m.blocked || []).map((d) => `<button class="tag x" data-u="${d}" aria-label="Remove ${d}">${d} ×</button>`).join("") || '<span class="mut">None</span>'}</div>`;
+    el.innerHTML = `<p>Set your weekly hours (${esc(S().tz)} time). Choose \u201cOff\u201d on days you don't tutor. Students only see times inside these hours.</p><div class="grid">${DOW.map((n, i) => `<div class="card"><h3 id="dw${i}">${n}</h3><label for="h${i}0">From</label><select id="h${i}0" data-h="${i}0" aria-describedby="dw${i}">${hourOpts(0, 23, m.avail?.[i]?.[0])}</select><label for="h${i}1">To</label><select id="h${i}1" data-h="${i}1" aria-describedby="dw${i}">${hourOpts(1, 24, m.avail?.[i]?.[1])}</select></div>`).join("")}</div><button class="btn" id="sv" style="margin-top:18px">Save hours</button><h3 style="margin-top:32px"><label for="bd" style="font:inherit;margin:0">Days off</label></h3><div class="row"><input type="date" id="bd" style="width:auto"><button class="btn alt sm" id="bl">Block this date</button></div><div class="tags" style="margin-top:12px">${(m.blocked || []).map((d) => `<button class="tag x" data-u="${d}" aria-label="Remove ${d}">${d} ×</button>`).join("") || '<span class="mut">None</span>'}</div>`;
     $("#sv").onclick = async () => {
       const h = {};
       for (let i = 0; i < 7; i++) {
         const a = $(`[data-h="${i}0"]`).value,
           b = $(`[data-h="${i}1"]`).value;
-        h[i] = a !== "" && b !== "" && +b > +a ? [+a, +b] : null;
+        if ((a === "") !== (b === "")) {
+          alert(`${DOW[i]}: pick both a start and end time, or set both to Off.`);
+          return;
+        }
+        if (a !== "" && b !== "" && +b <= +a) {
+          alert(`${DOW[i]}: the end time must be after the start time.`);
+          return;
+        }
+        h[i] = a !== "" && b !== "" ? [+a, +b] : null;
       }
       if (await saveMine({ avail: h })) {
         const sv = $("#sv");
